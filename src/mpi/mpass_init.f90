@@ -40,6 +40,7 @@ implicit none
          +   6 * maxsndg           & !max input sounding levels
          +   2 * 32                & !32 character length strings
          +   1 * maxlite * 32      & !lite variables 32 char length strings
+         +   1 * maxlite           & !lite variables accuracy
          +  17 *       1 * strl1   & !individual input strings
          +   1 *      50 * strl1   & !array of input strings
          +   5 * maxgrds * strl1   & !grid-dependent array of input strings
@@ -160,6 +161,7 @@ implicit none
        print*,'lite pack:',nm,trim(LITE_VARS(nm))
        CALL par_put_char (LITE_VARS(nm),32)
     enddo
+    CALL par_put_float (LITE_VAR_ACC, MAXLITE)
     CALL par_put_float (AVGTIM,1)
     CALL par_put_float (FRQMEAN,1)
     CALL par_put_float (FRQBOTH,1)
@@ -494,6 +496,7 @@ implicit none
     do nm = 1, nlite_vars
        CALL par_get_char (LITE_VARS(nm),32)
     enddo
+    CALL par_get_float (LITE_VAR_ACC, MAXLITE)
     CALL par_get_float (AVGTIM,1)
     CALL par_get_float (FRQMEAN,1)
     CALL par_get_float (FRQBOTH,1)

@@ -178,7 +178,7 @@ END SUBROUTINE shdf5_info
 
 !##############################################################################
 Subroutine shdf5_orec (fileid,iphdf5,dsetname,mem_select,file_select &
-                      ,file_chunks &
+                      ,file_chunks, zfp_accuracy &
                       ,ivara,rvara,cvara,dvara,lvara  &
                       ,ivars,rvars,cvars,dvars,lvars)
 
@@ -209,8 +209,16 @@ integer :: hdferr ! Error flag
 ! 1 to enable truncation, 0 to disable. 
 integer :: enable_zfp_truncation
 real*4 :: zfp_accuracy
+print*, "Variable: ", dsetname, " ZFP accuracy: ", zfp_accuracy
+if(zfp_accuracy == 0.) then
+enable_zfp_truncation = 0
+elseif(zfp_accuracy>0.) then
 enable_zfp_truncation = 1
-zfp_accuracy = 0.1
+else 
+print*, "Incorrect ZFP Accuracy parameter", zfp_accuracy
+stop 'zfp accuracy wrong'
+endif
+
 !print*, "Enable ZFP Truncation? ", enable_zfp_truncation
 !print*, "ZFP accuracy? ", zfp_accuracy
 

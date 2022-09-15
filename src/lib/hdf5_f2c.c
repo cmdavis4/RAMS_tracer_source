@@ -382,6 +382,7 @@ hid_t  fh5_set_hdf5_dtype (int type_code);
     printf("Error in chunking, herr: %d", herr);
     return;}
 
+    //printf("Truncating variable %s to accuracy %f\n", dname, *truncation_accuracy);
     H5Pset_zfp_accuracy_cdata(*truncation_accuracy, cd_nelmts, cd_vals);
     herr = H5Pset_filter(propid, H5Z_FILTER_ZFP, H5Z_FLAG_MANDATORY, cd_nelmts, cd_vals);
 
@@ -401,20 +402,20 @@ hid_t  fh5_set_hdf5_dtype (int type_code);
   #if H5_VERSION_GE(1,10,3)
   #ifdef ENABLE_PARALLEL_COMPRESSION 
     
-    //herr = H5Pset_shuffle (propid);
+    herr = H5Pset_shuffle (propid);
     herr = H5Pset_deflate (propid,6);
   
   #else
   if (*iphdf5 != 1)
     {
-    //herr = H5Pset_shuffle (propid);
+    herr = H5Pset_shuffle (propid);
     herr = H5Pset_deflate (propid,6);
     }
   #endif//enable parallel compression ifdef
   #else//H5_VERSION_GE
   if (*iphdf5 != 1)
     {
-    //herr = H5Pset_shuffle (propid);
+    herr = H5Pset_shuffle (propid);
     herr = H5Pset_deflate (propid,6);
     }
     #endif //H5_VERSION_GE if

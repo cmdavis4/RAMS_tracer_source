@@ -25,7 +25,7 @@ character(len=*) :: group,vr,cc
 real :: ff
 integer :: ii,nv
 integer :: inrflg
-integer, parameter ::nvgrid=37,nvstrt=77,nvindat=147,nvsound=10
+integer, parameter ::nvgrid=37,nvstrt=78,nvindat=147,nvsound=10
 integer ::  igrids(nvgrid),istart(nvstrt),iindat(nvindat),isound(nvsound)
 character(len=16) :: grids(nvgrid),start(nvstrt),indat(nvindat),sound(nvsound)
 data igrids/nvgrid*0/,istart/nvstrt*0/,iindat/nvindat*0/,isound/nvsound*0/
@@ -48,7 +48,8 @@ DATA START/  &
      ,'RODA_UPA0','RODA_HGT','RODA_ZFAC','ODA_SFC_TIL','ODA_SFC_TEL'     &
      ,'ODA_UPA_TIL','ODA_UPA_TEL','HFILIN','IPAST_SFC','ICLOBBER'        &
      ,'IOUTPUT','AFILEPREF','FRQSTATE','FRQST_KEEP','FRQLITE'            &
-     ,'NLITE_VARS','LITE_VARS','AVGTIM','FRQMEAN','FRQBOTH','TOPFILES'   &
+     ,'NLITE_VARS','LITE_VARS','ACC_LT_VAR','AVGTIM','FRQMEAN',        &
+     'FRQBOTH','TOPFILES'                                                &
      ,'SFCFILES','SSTFPFX','NDVIFPFX','ITOPTFLG','ISSTFLG','IVEGTFLG'    &
      ,'ISOILFLG','NDVIFLG','IUPDNDVI','IUPDSST','ITOPTFN'                &
      ,'ISSTFN','IVEGTFN','ISOILFN','NDVIFN','ITOPSFLG','TOPTENH'         &
@@ -205,6 +206,7 @@ IF(GROUP.EQ.'$MODEL_FILE_INFO') THEN
  IF(VR.EQ.'FRQLITE')     CALL varsetf (VR,FRQLITE,NV,1,FF,0.,1.E20)
  IF(VR.EQ.'NLITE_VARS')  CALL varseti (VR,NLITE_VARS,NV,1,II,0,MAXLITE)
  IF(VR.EQ.'LITE_VARS')   CALL varsetc (VR,LITE_VARS(NV),NV,MAXLITE,CC,1,32)
+ IF(VR.EQ.'ACC_LT_VAR')  CALL varsetf (VR,LITE_VAR_ACC(NV),NV,MAXLITE,FF,0.,1.e20)
  IF(VR.EQ.'AVGTIM')      CALL varsetf (VR,AVGTIM,NV,1,FF,-1.E20,1.E20)
  IF(VR.EQ.'FRQMEAN')     CALL varsetf (VR,FRQMEAN,NV,1,FF,0.,1.E20)
  IF(VR.EQ.'FRQBOTH')     CALL varsetf (VR,FRQBOTH,NV,1,FF,0.,1.E20)

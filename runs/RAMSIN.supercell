@@ -211,12 +211,13 @@
                               !  the subsequent write. 
                               !  Intended to be a mutiple of and >= FRQSTATE
 !-----------------------------------------------------------------------
-   FRQLITE  = 0.,            ! Frequency for "lite" files
+   FRQLITE  = 600.,            ! Frequency for "lite" files
                              !   = 0 : no lite files
-   NLITE_VARS=0,
+   NLITE_VARS=7,
 
    LITE_VARS= 'GLAT','GLON','TOPT','PATCH_AREA', !Keep these always
               'UP','VP','WP', !This would be useful for hi-frequency trajectories
+   ACC_LT_VAR= 0., 0., 0., 0., 0.1, 0.01, 0.001,
 
 !-----------------------------------------------------------------------
    AVGTIM   = 0.,            ! Averaging time for analysis variables

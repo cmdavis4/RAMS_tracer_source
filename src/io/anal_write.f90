@@ -37,6 +37,9 @@ integer :: iphdf5
 type (hdf5_select_type) :: mem_select,file_select
 integer, dimension(HDF5_MAX_DIMS) :: file_chunks
 real, dimension(:,:,:,:), allocatable :: temp_var1, temp_var2
+! Holding variable for ZFP accuracy. This will be 0 for all but lite files, where 
+! it is user set. If it is 0, that means to not run ZFP/lossy compression. 
+real :: zfp_accuracy
 
 ! Timing variables
 real :: wtime_beg,wtime_end,ctime_beg,ctime_end
@@ -151,17 +154,21 @@ do ngr=1,ngrids
       iwrite=0
       if(vtype == 'INST' .and. vtab_r(nv,ngr)%ianal == 1) then
          iwrite=1
+         zfp_accuracy = 0
          v_pointer => vtab_r(nv,ngr)%var_p
       elseif(vtype == 'LITE' .and. vtab_r(nv,ngr)%ilite == 1) then
          iwrite=1
+         zfp_accuracy = vtab_r(nv,ngr)%var_acc
          v_pointer => vtab_r(nv,ngr)%var_p
       elseif(vtype == 'MEAN' .and. vtab_r(nv,ngr)%imean == 1 .and. &
                                    vtab_r(nv,ngr)%ianal == 1) then
          iwrite=1
+          zfp_accuracy = 0
          v_pointer => vtab_r(nv,ngr)%var_m
       elseif(vtype == 'BOTH' .and. vtab_r(nv,ngr)%ilite == 1 .and. &
                                    vtab_r(nv,ngr)%imean == 1) then
          iwrite=1
+          zfp_accuracy = 0
          v_pointer => vtab_r(nv,ngr)%var_m
       endif
 
@@ -252,9 +259,9 @@ do ngr=1,ngrids
 
          CALL shdf5_set_hs_select (vtab_r(nv,ngr)%idim_type,'W',ngr &
                 ,mem_select,file_select,file_chunks)
-
+         
          CALL shdf5_orec (h5_fid,iphdf5,varn &
-                ,mem_select,file_select,file_chunks,rvara=temp_var1)
+                ,mem_select,file_select,file_chunks,zfp_accuracy,rvara=temp_var1)
          !print*,'done all ',vtype,' ',trim(varn)
 
          deallocate(temp_var1)
@@ -380,7 +387,7 @@ do ngr=1,ngrids
          CALL shdf5_set_hs_select (idtype,'W',ngr &
                  ,mem_select,file_select,file_chunks)
          CALL shdf5_orec (h5_fid,iphdf5,varn &
-                 ,mem_select,file_select,file_chunks,rvara=temp_var2)
+                 ,mem_select,file_select,file_chunks, zfp_accuracy,rvara=temp_var2)
          !print*,'done xtra ',vtype,' ',trim(varn)
 
       endif

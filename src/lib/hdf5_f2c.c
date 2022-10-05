@@ -395,6 +395,7 @@ hid_t  fh5_set_hdf5_dtype (int type_code);
     // we want truncation on, but the ZFP library isn't included.
     *hdferr=-9999;
     printf("Error: ZFP compression requested, but ZFP library not included.\n");
+    return;
     #endif
   }
   else{

@@ -29,7 +29,9 @@ RAMS_VERSION=6.3.04
 # Typically can use "parallel" for either, but some supercomputers require
 # use of the serial executable.
 #############################################################################
-HDF5_ROOT=/nobackupp19/swfreema/INCUS/rams_dev/hdf5-zfp-work/HDF5-1.12.2
+HDF5_ROOT=/home/smsaleeb/software/hdf5-1.10.7
+# ZFP ROOT only needed if gcc compiler flag '-DENABLE_ZFP_COMPRESSION' is used
+ZFP_ROOT=/home/pmarin/misc/h5z_zfp_git/H5Z-ZFP/install # For ZFP Compression
 
 #############################################################################
 # Set root locations for parallel processing MPI software.
@@ -55,7 +57,7 @@ UTILS_INCS=-I$(MODEL)/include
 #  -Wl,-rpath,/home/smsaleeb/software/szip-2.1/lib \
 #  -Wl,-rpath,/home/smsaleeb/software/zlib-1.2.5/lib
 HDF5_LIBS=-L$(HDF5_ROOT)/lib -lhdf5_hl -lhdf5
-HDF5_INCS=-I$(HDF5_ROOT)/include -I/nobackupp19/swfreema/INCUS/rams_dev/hdf5-zfp-work/H5Z-ZFP-1.1.0/include
+HDF5_INCS=-I$(HDF5_ROOT)/include -I$(ZFP_ROOT)/include #Added ZFP Compression
 HDF5_DEFS=
 
 #############################################################################
@@ -148,6 +150,9 @@ LIBS=-L/usr/lib/x86_64-linux-gnu -L/nasa/szip/2.1.1/lib -lrt -lpthread -lsz -lz
 # But if it does work, it will make it past the first analysis file write.
 # If it does not work, it will fail or hang on the first file write.
 #
+# Add the "-DENABLE_ZFP_COMPRESSION" flag for using ZFP compression
+# Need to install ZFP compression and specify in ZFP compression path above 
+#
 # Use -std=c99 if you need the c99 standard. Use -std=gnu99 potentially to
 # stop unnecessary warnings related to "popen/pclose" in "dprep" code.
 #
@@ -156,9 +161,8 @@ LIBS=-L/usr/lib/x86_64-linux-gnu -L/nasa/szip/2.1.1/lib -lrt -lpthread -lsz -lz
 # that are not really as issue for us, but you can turn warnings back on by
 # removing the "-w" if you wish to alter code to eliminate warnings.
 #############################################################################
-#C_COMP=gcc
-C_COMP=/home/smsaleeb/software/mpich-3.3.2/bin/mpicc
-C_OPTS=-O3 -DUNDERSCORE -DLITTLE -std=gnu99 -DENABLE_PARALLEL_COMPRESSION -w
+C_COMP=gcc
+C_OPTS=-O3 -DUNDERSCORE -DLITTLE -std=gnu99 -DENABLE_PARALLEL_COMPRESSION -w -DENABLE_ZFP_COMPRESSION
 #C_OPTS=-O3 -DUNDERSCORE -DLITTLE -std=gnu99 -DRAMS_DOUBLE_PREC \
 #  -DENABLE_PARALLEL_COMPRESSION -w
 

@@ -31,7 +31,7 @@ RAMS_VERSION=6.3.04
 #############################################################################
 HDF5_ROOT=/home/smsaleeb/software/hdf5-1.10.7
 # ZFP ROOT only needed if gcc compiler flag '-DENABLE_ZFP_COMPRESSION' is used
-ZFP_ROOT=/home/pmarin/misc/h5z_zfp_git/H5Z-ZFP/install # For ZFP Compression
+H5Z_ZFP_ROOT=/home/pmarin/misc/h5z_zfp_git/H5Z-ZFP/install # For ZFP Compression
 
 #############################################################################
 # Set root locations for parallel processing MPI software.
@@ -57,7 +57,7 @@ UTILS_INCS=-I$(MODEL)/include
 #  -Wl,-rpath,/home/smsaleeb/software/szip-2.1/lib \
 #  -Wl,-rpath,/home/smsaleeb/software/zlib-1.2.5/lib
 HDF5_LIBS=-L$(HDF5_ROOT)/lib -lhdf5_hl -lhdf5
-HDF5_INCS=-I$(HDF5_ROOT)/include -I$(ZFP_ROOT)/include #Added ZFP Compression
+HDF5_INCS=-I$(HDF5_ROOT)/include -I$(H5Z_ZFP_ROOT)/include #Added ZFP Compression
 HDF5_DEFS=
 
 #############################################################################

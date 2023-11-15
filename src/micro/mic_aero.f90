@@ -1,16 +1,104 @@
 !##############################################################################
+Subroutine tracer_sources (n1,n2,n3,tracerp,ifm,nsc)
+
+  use micphys
+  use rconstants
+  use mem_grid
+  use mem_tracer
+  use mem_micro
+  use node_mod
+  use mem_leaf
+  use mem_basic
+  
+  implicit none
+  
+  integer :: n1,n2,n3,i,j,k,ifm,nsc,ii,jj,point_source_i,point_source_j,&
+    point_source_k,ipatch
+  real, dimension(n1,n2,n3) :: tracerp,dn0
+  real :: ccn_maxt,tracer_max_rate,rain_rate_threshold
+
+  tracer_max_rate = 10000.
+
+  !############################ Point source #####################################
+  ! As a first pass, try emulating something like a smoke source—a point source
+  ! that sets the value in a single grid point to at least some minimum value
+  if(nsc==1) then
+    point_source_i = n2/2
+    point_source_j = n3/2
+    ! Set tracer level at second z level (i.e. first above ground) to at least 1000
+    ! Check that the center grid point that we want is in the subdomain of this node
+    if (ia+mi0(ifm)<=point_source_i .and. iz+mi0(ifm)>=point_source_i .and. &
+        ja+mj0(ifm)<=point_source_j .and. jz+mj0(ifm)>=point_source_j) then
+      tracerp(2,point_source_i+mi0(ifm),point_source_j+mj0(ifm)) = &
+        MAX(tracer_max_rate,tracerp(2,point_source_i+mi0(ifm),point_source_j+mj0(ifm)))
+    endif
+  endif
+  
+
+  !######################## Rain-activated source ################################
+  ! At all surface points where the rain rate exceeds some value, emit tracer at the 
+  ! rate of tracer_max_rate
+  if(nsc==2) then
+    rain_rate_threshold = 0.0004
+    ! print*,MAXVAL(micro_g(ifm)%pcpvr)
+    do j = ja,jz
+      do i = ia,iz
+        if (micro_g(ifm)%pcpvr(2,i,j)>=rain_rate_threshold) then
+          tracerp(2,i,j) = MAX(tracer_max_rate,tracerp(2,i,j))
+        endif
+      enddo
+    enddo
+  endif
+  
+
+  !######################## Urban source ################################
+  ! At all surface points where the LEAF vegetation class is urban, emit tracer at the 
+  ! rate of tracer_max_rate
+  if(nsc==3) then
+    do j = ja,jz
+      do i = ia,iz
+        ! Loop through the patches for each grid cell (this is a fixed number that is the same
+        ! for all cells) and emit tracer if any of them are the urban (19) or very urban (21)
+        ! land surface types
+        do ipatch = 1,npatch
+          if (leaf_g(ifm)%leaf_class(i,j,ipatch).eq.19 .or. leaf_g(ifm)%leaf_class(i,j,ipatch).eq.21) then
+            tracerp(2,i,j) = MAX(tracer_max_rate,tracerp(2,i,j))
+          endif
+        enddo
+      enddo
+    enddo
+  endif  
+  
+
+
+  return
+END SUBROUTINE tracer_sources
+  
+  
+
+!##############################################################################
 Subroutine aerosols ()
 
 use mem_basic
 use mem_micro
 use mem_grid
 use mem_leaf
+use mem_tracer
 use node_mod
 use micphys
 
 implicit none
 
-integer :: i,j
+integer :: i,j,nsc
+
+! Run tracer update routine
+if(itracer > 0) then
+  do nsc=1,itracer
+    print*,MAXVAL(tracer_g(nsc,ngrid)%tracerp)
+    CALL tracer_sources(mzp,mxp,myp,tracer_g(nsc,ngrid)%tracerp(1,1,1) &
+      ,ngrid,nsc)
+  enddo
+endif
 
 !Run the SEASALT and DUST Source model before the call to Micro
 if(idust==2) then

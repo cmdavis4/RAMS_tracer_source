@@ -516,27 +516,13 @@ real :: ccn_maxt
 if(print_msg) print*,'Start Initializing Tracers, Grid:',ifm,' Tracer:',nsc
 
 !Convert RAMSIN #/mg to #/kg
- ccn_maxt = ccn_max * 1.e6 
+ccn_maxt = 0.
 
 do j = 1,n3
  do i = 1,n2
   do k = 1,n1
-
-   !Get absolute grid points for parallel (& sequential) computation
-   ii = i+mi0(ngrid)
-   jj = j+mj0(ngrid)
-
-   !Set up Vertical profile, Exponential decrease that scales with pressure
-   if(nsc==1) then
-    if(k<=2) tracerp(k,i,j)=ccn_maxt
-    if(k>2)  tracerp(k,i,j)=ccn_maxt*exp(-zt(k)/7000.)
-   endif
-   !Set up Field of CCN mass mixing ratio (kg/kg)
-   if(nsc==2) then
-    tracerp(k,i,j) = ((aero_medrad(1)*aero_rg2rm(1))**3.) &
-                *tracer_g(1,ifm)%tracerp(k,i,j)/(0.23873/aero_rhosol(1))
-   endif
-
+   ! Set all initial tracer to 0
+   tracerp(k,i,j) = 0
   enddo
  enddo
 enddo
@@ -545,6 +531,7 @@ if(nsc.eq.itracer .and. print_msg) print*,' '
 
 return
 END SUBROUTINE init_tracer
+
 
 !##############################################################################
 Subroutine jnmbinit ()

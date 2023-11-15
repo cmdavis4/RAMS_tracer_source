@@ -26,3 +26,5 @@ misc/*
 *.tar.gz
 *.tar
 *.tgz
+
+bin.rams/rams*

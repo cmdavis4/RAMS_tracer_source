@@ -15,7 +15,7 @@ Subroutine tracer_sources ()
   integer :: point_source_i, point_source_j, i, j, ipatch, nsc
   real :: tracer_max_rate, rain_rate_threshold
 
-  tracer_max_rate = 10000.
+  tracer_max_rate = 100000.
 
   if(itracer > 0) then
     do nsc=1,itracer
@@ -43,7 +43,7 @@ Subroutine tracer_sources ()
         ! print*,MAXVAL(micro_g(ngrid)%pcpvr)
         do j = ja,jz
           do i = ia,iz
-            if (micro_g(ngrid)%pcpvr(2,i,j)>=rain_rate_threshold) then
+            if (micro_g(ngrid)%pcprr(i,j)>=rain_rate_threshold) then
               tracer_g(nsc,ngrid)%tracerp(2,i,j) = MAX(tracer_max_rate,tracer_g(nsc,ngrid)%tracerp(2,i,j))
             endif
           enddo

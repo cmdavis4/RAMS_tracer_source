@@ -565,13 +565,9 @@ implicit none
 
 integer :: n1,n2,n3,i,j,k,ifm,nsc,ii,jj
 real, dimension(n1,n2,n3) :: tracerp,dn0
-real :: ccn1_maxt
 
 ! Initialize Tracers
 if(print_msg) print*,'Start Initializing Tracers, Grid:',ifm,' Tracer:',nsc
-
-!Convert RAMSIN #/mg to #/kg
-ccn_maxt = 0.
 
 do j = 1,n3
  do i = 1,n2

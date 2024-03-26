@@ -580,10 +580,20 @@ elseif(ibubble==2) then
     acetmp1=(XMN(i+i0,1)+XMN(i+i0+1,1))*0.5
     acetmp2=(YMN(j+j0,1)+YMN(j+j0+1,1))*0.5
     acetmp3=(ZMN(k,1)+ZMN(k+1,1))*0.5
-    acetmp4=(acetmp1-bubctrx)/bubradx
-    acetmp4=acetmp4**2
-    acetmp5=(acetmp2-bubctry)/bubrady
-    acetmp5=acetmp5**2
+    !  Allow for an infinite bubble in x or y if the same value is passed for
+    !  IBDXIA and IBDXIZ or IBDYJA and IBDYJZ
+    if (bubradx /= 0) then
+      acetmp4=(acetmp1-bubctrx)/bubradx
+      acetmp4=acetmp4**2
+    else
+      acetmp4=0
+    end if
+    if (bubrady /= 0) then
+      acetmp5=(acetmp2-bubctry)/bubrady
+      acetmp5=acetmp5**2
+    else 
+      acetmp5=0
+    end if
     acetmp6=(acetmp3-bubctrz)/bubradz
     acetmp6=acetmp6**2
     if(jdim==0)acetmp5=acetmp4 !For 2D simulation let Y-dir = X-dir

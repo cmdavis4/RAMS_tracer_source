@@ -228,7 +228,7 @@ if(trim(runtype) == 'INITIAL' .or. &
       endif
 
       !Initialize bubble perturbation via RAMSIN flags for HH run only
-      if(initial==1) then
+      if((initial==1) .or. (initial==3 .and. hrestart==1)) then
        if((ibubble==1.or.ibubble==2.or.ibubble==3) .and. ifm==ibubgrd) then
          CALL bubble (mzp,mxp,myp,i0,j0,basic_g(ifm)%thp(1,1,1) &
                      ,basic_g(ifm)%rtp(1,1,1))

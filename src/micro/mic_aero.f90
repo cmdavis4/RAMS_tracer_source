@@ -13,9 +13,9 @@ Subroutine tracer_sources ()
   implicit none
   
   integer :: point_source_i, point_source_j, i, j, ipatch, nsc
-  real :: tracer_max_rate, rain_rate_threshold
+  real :: tracer_emission_rate, rain_rate_threshold
 
-  tracer_max_rate = 100000.
+  tracer_emission_rate = 100000.
 
   if(itracer > 0) then
     do nsc=1,itracer
@@ -30,7 +30,7 @@ Subroutine tracer_sources ()
         if (ia+mi0(ngrid)<=point_source_i .and. iz+mi0(ngrid)>=point_source_i .and. &
             ja+mj0(ngrid)<=point_source_j .and. jz+mj0(ngrid)>=point_source_j) then
               tracer_g(nsc,ngrid)%tracerp(2,point_source_i+mi0(ngrid),point_source_j+mj0(ngrid)) = &
-                MAX(tracer_max_rate,tracer_g(nsc,ngrid)%tracerp(2,point_source_i+mi0(ngrid),point_source_j+mj0(ngrid)))
+                tracer_g(nsc,ngrid)%tracerp(2,point_source_i+mi0(ngrid),point_source_j+mj0(ngrid)) + tracer_emission_rate
         endif
       endif
       
@@ -44,7 +44,7 @@ Subroutine tracer_sources ()
         do j = ja,jz
           do i = ia,iz
             if (micro_g(ngrid)%pcprr(i,j)>=rain_rate_threshold) then
-              tracer_g(nsc,ngrid)%tracerp(2,i,j) = MAX(tracer_max_rate,tracer_g(nsc,ngrid)%tracerp(2,i,j))
+              tracer_g(nsc,ngrid)%tracerp(2,i,j) = tracer_g(nsc,ngrid)%tracerp(2,i,j) + tracer_emission_rate
             endif
           enddo
         enddo
@@ -62,7 +62,7 @@ Subroutine tracer_sources ()
             ! land surface types
             do ipatch = 1,npatch
               if (leaf_g(ngrid)%leaf_class(i,j,ipatch).eq.19 .or. leaf_g(ngrid)%leaf_class(i,j,ipatch).eq.21) then
-                tracer_g(nsc,ngrid)%tracerp(2,i,j) = MAX(tracer_max_rate,tracer_g(nsc,ngrid)%tracerp(2,i,j))
+                tracer_g(nsc,ngrid)%tracerp(2,i,j) = tracer_g(nsc,ngrid)%tracerp(2,i,j) + tracer_emission_rate
               endif
             enddo
           enddo

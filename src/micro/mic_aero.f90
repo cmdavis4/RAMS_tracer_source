@@ -15,7 +15,7 @@ Subroutine tracer_sources ()
   integer :: point_source_i, point_source_j, i, j, ipatch, nsc
   real :: tracer_emission_rate, rain_rate_threshold
 
-  tracer_emission_rate = 100000.
+  tracer_emission_rate = 100000 * ((deltax/1000.)**2)  ! So that it's equal per unit area
 
   if(itracer > 0) then
     do nsc=1,itracer
@@ -24,7 +24,7 @@ Subroutine tracer_sources ()
       ! that sets the value in a single grid point to at least some minimum value
       if(nsc==1) then
         point_source_i = mxp/2
-        point_source_j = myp/2
+        point_source_j = myp/2  
         ! Set tracer level at second z level (i.e. first above ground) to at least 1000
         ! Check that the center grid point that we want is in the subdomain of this node
         if (ia+mi0(ngrid)<=point_source_i .and. iz+mi0(ngrid)>=point_source_i .and. &

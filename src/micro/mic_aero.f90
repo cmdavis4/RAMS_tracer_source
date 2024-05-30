@@ -12,7 +12,7 @@ Subroutine tracer_sources ()
   
   implicit none
   
-  integer :: point_source_i, point_source_j, i, j, ipatch, nsc
+  integer :: point_source_i, point_source_j, i, j, ipatch, nsc, fs_base_ls_index
   real :: tracer_emission_rate, rain_rate_threshold
 
   tracer_emission_rate = 100000 * ((deltax/1000.)**2)  ! So that it's equal per unit area
@@ -35,12 +35,18 @@ Subroutine tracer_sources ()
       endif
       
 
-      !######################## Rain-activated source ################################
+      !######################## Rain-activated sources ################################
       ! At all surface points where the rain rate exceeds some value, emit tracer at the 
       ! rate of tracer_max_rate
-      if(nsc==2) then
-        rain_rate_threshold = 0.0004
-        ! print*,MAXVAL(micro_g(ngrid)%pcpvr)
+      if (nsc >= 2 .and. nsc <= 4) then
+        if (nsc == 2) then
+          rain_rate_threshold = 0.0005
+        else if (nsc == 3) then
+          rain_rate_threshold = 0.005
+        else if (nsc == 4) then
+          rain_rate_threshold = 0.01
+        end if
+
         do j = ja,jz
           do i = ia,iz
             if (micro_g(ngrid)%pcprr(i,j)>=rain_rate_threshold) then
@@ -54,14 +60,28 @@ Subroutine tracer_sources ()
       !######################## Urban source ################################
       ! At all surface points where the LEAF vegetation class is urban, emit tracer at the 
       ! rate of tracer_max_rate
-      if(nsc==3) then
+      if(nsc >= 5) then
+        ! This is set up for a maximum of three patches emitting fixed-source tracer
+        ! Each patch has a land surface class integer associated with it; the land surface class
+        ! 1 ABOVE and 1 BELOW also emit this tracer class. This makes it simpler to have overlapping fixed
+        ! tracer sources that emit different kinds of tracer. The 3 patches are assigned land surface classes
+        ! 15, 17, and 19; so, classes 14, 15, and 16 emit TRACERP005, classes 16, 17, and 18 emit TRACERP006,
+        ! and classes 18, 19, and 20 emit TRACERP007
+        ! This assumes each patch can only overlap its next neighbor
+        if (nsc == 5) then
+          fs_base_ls_index = 15
+        else if (nsc == 6) then
+          fs_base_ls_index = 17
+        else if (nsc == 7) then
+          fs_base_ls_index = 19
+        end if
         do j = ja,jz
           do i = ia,iz
             ! Loop through the patches for each grid cell (this is a fixed number that is the same
-            ! for all cells) and emit tracer if any of them are the urban (19) or very urban (21)
-            ! land surface types
+            ! for all cells)
             do ipatch = 1,npatch
-              if (leaf_g(ngrid)%leaf_class(i,j,ipatch).eq.19 .or. leaf_g(ngrid)%leaf_class(i,j,ipatch).eq.21) then
+              if (leaf_g(ngrid)%leaf_class(i,j,ipatch) >= fs_base_ls_index - 1 .and. &
+                  leaf_g(ngrid)%leaf_class(i,j,ipatch) <= fs_base_ls_index + 1) then
                 tracer_g(nsc,ngrid)%tracerp(2,i,j) = tracer_g(nsc,ngrid)%tracerp(2,i,j) + tracer_emission_rate
               endif
             enddo

@@ -69,11 +69,11 @@ Subroutine tracer_sources ()
         ! and classes 18, 19, and 20 emit TRACERP007
         ! This assumes each patch can only overlap its next neighbor
         if (nsc == 5) then
-          fs_base_ls_index = 15
+          fs_base_ls_index = 21
         else if (nsc == 6) then
-          fs_base_ls_index = 17
+          fs_base_ls_index = 23
         else if (nsc == 7) then
-          fs_base_ls_index = 19
+          fs_base_ls_index = 25
         end if
         do j = ja,jz
           do i = ia,iz

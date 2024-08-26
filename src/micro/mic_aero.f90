@@ -19,75 +19,21 @@ Subroutine tracer_sources ()
 
   if(itracer > 0) then
     do nsc=1,itracer
-      !############################ Point source #####################################
-      ! As a first pass, try emulating something like a smoke source—a point source
-      ! that sets the value in a single grid point to at least some minimum value
-      if(nsc==1) then
-        point_source_i = mxp/2
-        point_source_j = myp/2  
-        ! Set tracer level at second z level (i.e. first above ground) to at least 1000
-        ! Check that the center grid point that we want is in the subdomain of this node
-        if (ia+mi0(ngrid)<=point_source_i .and. iz+mi0(ngrid)>=point_source_i .and. &
-            ja+mj0(ngrid)<=point_source_j .and. jz+mj0(ngrid)>=point_source_j) then
-              tracer_g(nsc,ngrid)%tracerp(2,point_source_i+mi0(ngrid),point_source_j+mj0(ngrid)) = &
-                tracer_g(nsc,ngrid)%tracerp(2,point_source_i+mi0(ngrid),point_source_j+mj0(ngrid)) + tracer_emission_rate
-        endif
-      endif
-      
-
-      !######################## Rain-activated sources ################################
-      ! At all surface points where the rain rate exceeds some value, emit tracer at the 
-      ! rate of tracer_max_rate
-      if (nsc >= 2 .and. nsc <= 4) then
-        if (nsc == 2) then
-          rain_rate_threshold = 0.0005
-        else if (nsc == 3) then
-          rain_rate_threshold = 0.005
-        else if (nsc == 4) then
-          rain_rate_threshold = 0.01
-        end if
-
-        do j = ja,jz
-          do i = ia,iz
-            if (micro_g(ngrid)%pcprr(i,j)>=rain_rate_threshold) then
-              tracer_g(nsc,ngrid)%tracerp(2,i,j) = tracer_g(nsc,ngrid)%tracerp(2,i,j) + tracer_emission_rate
-            endif
-          enddo
-        enddo
-      endif
-      
-
-      !######################## Urban source ################################
-      ! At all surface points where the LEAF vegetation class is urban, emit tracer at the 
-      ! rate of tracer_max_rate
-      if(nsc >= 5) then
-        ! This is set up for a maximum of three patches emitting fixed-source tracer
-        ! Each patch has a land surface class integer associated with it; the land surface class
-        ! 1 ABOVE and 1 BELOW also emit this tracer class. This makes it simpler to have overlapping fixed
-        ! tracer sources that emit different kinds of tracer. The 3 patches are assigned land surface classes
-        ! 15, 17, and 19; so, classes 14, 15, and 16 emit TRACERP005, classes 16, 17, and 18 emit TRACERP006,
-        ! and classes 18, 19, and 20 emit TRACERP007
-        ! This assumes each patch can only overlap its next neighbor
-        if (nsc == 5) then
-          fs_base_ls_index = 21
-        else if (nsc == 6) then
-          fs_base_ls_index = 23
-        else if (nsc == 7) then
-          fs_base_ls_index = 25
-        end if
-        do j = ja,jz
-          do i = ia,iz
-            ! Loop through the patches for each grid cell (this is a fixed number that is the same
-            ! for all cells)
-            do ipatch = 1,npatch
-              if (leaf_g(ngrid)%leaf_class(i,j,ipatch) >= fs_base_ls_index - 1 .and. &
-                  leaf_g(ngrid)%leaf_class(i,j,ipatch) <= fs_base_ls_index + 1) then
-                tracer_g(nsc,ngrid)%tracerp(2,i,j) = tracer_g(nsc,ngrid)%tracerp(2,i,j) + tracer_emission_rate
-              endif
-            enddo
-          enddo
-        enddo
-      endif
+      !############################ Test tracer computation time #####################################
+      ! Have the middle 1/4 of the domain in each direction emit tracer; do the same for all tracer species
+      point_source_ia = 3 * mxp / 8
+      point_source_iz = 5 * mxp / 8
+      point_source_ja = 3 * myp / 8
+      point_source_jz = 5 * myp / 8
+      do i = ia, iz
+        do j = ja, jz
+          if (i+mi0(ngrid)>=point_source_ia .and. i+mi0(ngrid)<=point_source_iz .and. &
+              j+mj0(ngrid)>=point_source_ja .and. j+mj0(ngrid)<=point_source_jz) then
+                tracer_g(nsc,ngrid)%tracerp(2,i+mi0(ngrid),j+mj0(ngrid)) = &
+                  tracer_g(nsc,ngrid)%tracerp(2,i+mi0(ngrid),j+mj0(ngrid)) + tracer_emission_rate
+          end if
+        end do
+      end do
     enddo
   endif
   return

@@ -12,27 +12,27 @@ Subroutine tracer_sources ()
   
   implicit none
   
-  integer :: point_source_ia, point_source_iz, point_source_ja, point_source_jz, i, j, ipatch, nsc, fs_base_ls_index
+  integer :: emitter_min_leaf_class, i, j, ipatch, nsc, fs_base_ls_index, tracer_class
   real :: tracer_emission_rate, rain_rate_threshold
 
-  tracer_emission_rate = 1000 * ((deltax/1000.)**2)  ! So that it's equal per unit area
+  tracer_emission_rate = 100000 * ((deltax/1000.)**2)  ! So that it's equal per unit area
 
   if(itracer > 0) then
-    do nsc=1,itracer
       !############################ Test tracer computation time #####################################
-      ! Define the emission region and make it the same for all tracer species
-      point_source_ia = 140
-      point_source_iz = 160
-      point_source_ja = 65
-      point_source_jz = 85
-      do i = ia, iz
-        do j = ja, jz
-          if (i+mi0(ngrid)>=point_source_ia .and. i+mi0(ngrid)<=point_source_iz .and. &
-              j+mj0(ngrid)>=point_source_ja .and. j+mj0(ngrid)<=point_source_jz) then
-                tracer_g(nsc,ngrid)%tracerp(2,i,j) = tracer_g(nsc,ngrid)%tracerp(2,i,j) + tracer_emission_rate
-          end if
-        end do
-      end do
+      ! Define the first leaf class that emits tracer
+      emitter_min_leaf_class = 21
+      do j = ja,jz
+        do i = ia,iz
+          ! Loop through the patches for each grid cell (this is a fixed number that is the same
+          ! for all cells)
+          do ipatch = 1,npatch
+            if (leaf_g(ngrid)%leaf_class(i,j,ipatch) >= emitter_min_leaf_class .and. &
+                leaf_g(ngrid)%leaf_class(i,j,ipatch) <= emitter_min_leaf_class + itracer - 1) then
+                  tracer_class = leaf_g(ngrid)%leaf_class(i,j,ipatch) - emitter_min_leaf_class + 1
+                  tracer_g(tracer_class,ngrid)%tracerp(2,i,j) = tracer_g(tracer_class,ngrid)%tracerp(2,i,j) + tracer_emission_rate
+            endif
+          enddo
+        enddo
     enddo
   endif
   return

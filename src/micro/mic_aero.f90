@@ -12,25 +12,24 @@ Subroutine tracer_sources ()
   
   implicit none
   
-  integer :: point_source_i, point_source_j, i, j, ipatch, nsc, fs_base_ls_index
+  integer :: point_source_ia, point_source_iz, point_source_ja, point_source_jz, i, j, ipatch, nsc, fs_base_ls_index
   real :: tracer_emission_rate, rain_rate_threshold
 
-  tracer_emission_rate = 100000 * ((deltax/1000.)**2)  ! So that it's equal per unit area
+  tracer_emission_rate = 1000 * ((deltax/1000.)**2)  ! So that it's equal per unit area
 
   if(itracer > 0) then
     do nsc=1,itracer
       !############################ Test tracer computation time #####################################
-      ! Have the middle 1/4 of the domain in each direction emit tracer; do the same for all tracer species
-      point_source_ia = 3 * mxp / 8
-      point_source_iz = 5 * mxp / 8
-      point_source_ja = 3 * myp / 8
-      point_source_jz = 5 * myp / 8
+      ! Define the emission region and make it the same for all tracer species
+      point_source_ia = 140
+      point_source_iz = 160
+      point_source_ja = 65
+      point_source_jz = 85
       do i = ia, iz
         do j = ja, jz
           if (i+mi0(ngrid)>=point_source_ia .and. i+mi0(ngrid)<=point_source_iz .and. &
               j+mj0(ngrid)>=point_source_ja .and. j+mj0(ngrid)<=point_source_jz) then
-                tracer_g(nsc,ngrid)%tracerp(2,i+mi0(ngrid),j+mj0(ngrid)) = &
-                  tracer_g(nsc,ngrid)%tracerp(2,i+mi0(ngrid),j+mj0(ngrid)) + tracer_emission_rate
+                tracer_g(nsc,ngrid)%tracerp(2,i,j) = tracer_g(nsc,ngrid)%tracerp(2,i,j) + tracer_emission_rate
           end if
         end do
       end do

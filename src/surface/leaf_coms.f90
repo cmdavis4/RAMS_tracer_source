@@ -95,7 +95,7 @@ real, dimension(nzgmax+nzsmax+1) ::  &
    ,soil_liq      & ! soil liquid water content [m] (nzg+1)
    ,qwflux          ! soil energy flux from water flux [J/m2] (nzg)
 
-integer, parameter :: nstyp=12,nvtyp=25
+integer, parameter :: nstyp=12,nvtyp=221
 
 real, dimension(nstyp)        :: slcpd,slbs,sfldcap  &
                                 ,slmsts,slpots  &

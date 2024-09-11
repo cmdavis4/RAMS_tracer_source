@@ -12,26 +12,45 @@ Subroutine tracer_sources ()
   
   implicit none
   
-  integer :: emitter_min_leaf_class, i, j, ipatch, nsc, fs_base_ls_index, tracer_class
-  real :: tracer_emission_rate, rain_rate_threshold
+  integer :: emitter_min_leaf_class, i, j, ipatch, nsc, fs_base_ls_index, tracer_class, rrt_ix
+  real :: tracer_emission_rate
+  real, parameter, dimension(6) :: rain_rate_thresholds = (/ &
+    0.00027777, &  ! 1 mm/hr
+    0.00138885, &  ! 5 mm/hr
+    0.00277771, &  ! 10 mm/hr
+    0.00555542, &  ! 20 mm/hr
+    0.01111083, &  ! 40 mm/hr
+    0.02222167 &  ! 80 mm/hr
+/)
 
   tracer_emission_rate = 100000 * ((deltax/1000.)**2)  ! So that it's equal per unit area
 
+  ! Define the first leaf class that emits tracer
+  emitter_min_leaf_class = 21
+
+  ! Tracer numbering scheme is that tracers numbered 1 : size(rain_rate_thresholds) correspond to the rain-sourced
+  ! tracers, and tracers numberedd size(rain_rate_thresholds)+1 : itracer correspond to the fixed-source tracers
+
   if(itracer > 0) then
-      !############################ Test tracer computation time #####################################
-      ! Define the first leaf class that emits tracer
-      emitter_min_leaf_class = 21
       do j = ja,jz
         do i = ia,iz
+          do rrt_ix = 1,size(rain_rate_thresholds)
+            
+            !############################ Rain-sourced #####################################
+            if (micro_g(ngrid)%pcprr(i,j)>=rain_rate_thresholds(rrt_ix)) then
+              tracer_g(rrt_ix,ngrid)%tracerp(2,i,j) = tracer_g(rrt_ix,ngrid)%tracerp(2,i,j) + tracer_emission_rate
+            end if
+          end do
+
+          !############################ Fixed source #####################################
           ! Loop through the patches for each grid cell (this is a fixed number that is the same
           ! for all cells)
-          do ipatch = 1,npatch
-            if (leaf_g(ngrid)%leaf_class(i,j,ipatch) >= emitter_min_leaf_class .and. &
-                leaf_g(ngrid)%leaf_class(i,j,ipatch) <= emitter_min_leaf_class + itracer - 1) then
-                  tracer_class = leaf_g(ngrid)%leaf_class(i,j,ipatch) - emitter_min_leaf_class + 1
-                  tracer_g(tracer_class,ngrid)%tracerp(2,i,j) = tracer_g(tracer_class,ngrid)%tracerp(2,i,j) + tracer_emission_rate
+          ! Only consider the second patch, hence 2 as the third subscript to leaf_class
+          if (leaf_g(ngrid)%leaf_class(i,j,2) >= emitter_min_leaf_class .and. &
+              leaf_g(ngrid)%leaf_class(i,j,2) <= emitter_min_leaf_class + itracer - 1) then
+                tracer_class = size(rain_rate_thresholds) + leaf_g(ngrid)%leaf_class(i,j,2) - emitter_min_leaf_class + 1
+                tracer_g(tracer_class,ngrid)%tracerp(2,i,j) = tracer_g(tracer_class,ngrid)%tracerp(2,i,j) + tracer_emission_rate
             endif
-          enddo
         enddo
     enddo
   endif

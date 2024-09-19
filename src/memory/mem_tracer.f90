@@ -10,6 +10,7 @@ implicit none
       ! Variables to be dimensioned by (nzp,nxp,nyp)
       real, allocatable, dimension(:,:,:) :: tracerp
       real, allocatable, dimension(:) :: tracert
+      real, allocatable, dimension(:, :) :: acctracer
 
    End Type
    
@@ -30,9 +31,11 @@ implicit none
    integer :: nsc
 
 ! Allocate arrays based on options (if necessary)
+   ! Order of n1, n2, n3 is z, x, y
 
    do nsc=1,itracer
       allocate (tracer(nsc)%tracerp(n1,n2,n3))
+      allocate (tracer(nsc)%acctracer(n2,n3))
    enddo
 
 return
@@ -50,6 +53,7 @@ implicit none
 
    do nsc=1,itracer
      if (allocated(tracer(nsc)%tracerp))  deallocate (tracer(nsc)%tracerp)
+     if (allocated(tracer(nsc)%acctracer))  deallocate (tracer(nsc)%acctracer)
    enddo
 
 return
@@ -66,6 +70,7 @@ implicit none
    integer, intent(in) :: imean,n1,n2,n3,ng
    integer :: nsc,npts
    character (len=10) :: sname
+   character (len=13) :: acc_sname
 
 ! Fill arrays into variable tables
 
@@ -75,6 +80,11 @@ implicit none
       write(sname,'(a7,i3.3)') 'TRACERP',nsc
       CALL vtables2 (tracer(nsc)%tracerp(1,1,1),tracerm(nsc)%tracerp(1,1,1) &
          ,ng, npts, imean, sname//' :3:anal:mpti:mpt1')
+     endif
+     if (allocated(tracer(nsc)%acctracer)) then
+      write(acc_sname,'(a10,i3.3)') 'ACCTRACERP',nsc
+      CALL vtables2 (tracer(nsc)%acctracer(1,1),tracerm(nsc)%acctracer(1,1) &
+         ,ng, npts, imean, acc_sname//' :2:anal:mpti')
      endif
    enddo
 

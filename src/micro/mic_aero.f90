@@ -22,6 +22,9 @@ Subroutine tracer_sources ()
     0.01111083, &  ! 40 mm/hr
     0.02222167 &  ! 80 mm/hr
 /)
+  ! We'll have a total emitted tracer for each rain-sourced tracer as well, so the total number will be
+  ! double the number of base tracers
+  integer, parameter :: n_rain_sourced_tracers = size(rain_rate_thresholds) * 2
 
   tracer_emission_rate = 100000 * ((deltax/1000.)**2)  ! So that it's equal per unit area
 
@@ -35,10 +38,12 @@ Subroutine tracer_sources ()
       do j = ja,jz
         do i = ia,iz
           do rrt_ix = 1,size(rain_rate_thresholds)
-            
             !############################ Rain-sourced #####################################
             if (micro_g(ngrid)%pcprr(i,j)>=rain_rate_thresholds(rrt_ix)) then
+              ! Add the tracer emission rate to the concentration of this tracer
               tracer_g(rrt_ix,ngrid)%tracerp(2,i,j) = tracer_g(rrt_ix,ngrid)%tracerp(2,i,j) + tracer_emission_rate
+              ! Also add it to the running total emitted for this tracer
+              tracer_g(rrt_ix,ngrid)%acctracer(i,j) = tracer_g(rrt_ix,ngrid)%acctracer(i,j) + tracer_emission_rate
             end if
           end do
 
@@ -48,8 +53,12 @@ Subroutine tracer_sources ()
           ! Only consider the second patch, hence 2 as the third subscript to leaf_class
           if (leaf_g(ngrid)%leaf_class(i,j,2) >= emitter_min_leaf_class .and. &
               leaf_g(ngrid)%leaf_class(i,j,2) <= emitter_min_leaf_class + itracer - 1) then
+                ! Calculate the tracer number based on the surface leaf class
                 tracer_class = size(rain_rate_thresholds) + leaf_g(ngrid)%leaf_class(i,j,2) - emitter_min_leaf_class + 1
+                ! Add the tracer emission rate to the concentration of this tracer
                 tracer_g(tracer_class,ngrid)%tracerp(2,i,j) = tracer_g(tracer_class,ngrid)%tracerp(2,i,j) + tracer_emission_rate
+                ! Also add it to the running total emitted for this tracer
+                tracer_g(tracer_class,ngrid)%acctracer(i,j) = tracer_g(tracer_class,ngrid)%acctracer(i,j) + tracer_emission_rate
             endif
         enddo
     enddo

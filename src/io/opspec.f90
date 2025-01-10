@@ -712,7 +712,7 @@ IF( ((icloud .GE. 2 .AND. icloud .LE. 4 .AND. cparm .LE. 0.)  &
    IFATERR=IFATERR+1
 ENDIF
 
-IF(ibubble.lt.0 .or. ibubble.gt.3) then
+IF(ibubble.lt.0 .or. ibubble.gt.4) then
    PRINT*,' FATAL - IBUBBLE must be 0, 1, 2, or 3'
    PRINT*,'         0 = off'
    PRINT*,'         1 = RAMSIN-set square bubble'

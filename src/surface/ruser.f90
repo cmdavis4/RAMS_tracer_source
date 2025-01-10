@@ -546,8 +546,9 @@ if(ibubble==1) then
      enddo
    endif
  enddo
+endif
 
-elseif(ibubble==2) then
+if(ibubble==2 .or. ibubble==4) then
  if(print_msg) then
   print*,'INITIALIZING Cosine-Squared RAMSIN WARM BUBBLE HERE'
   print*,'On grid number=',IBUBGRD
@@ -609,8 +610,9 @@ elseif(ibubble==2) then
    enddo
   enddo
  enddo
+endif
 
-elseif(ibubble==3) then
+if(ibubble==3 .or. ibubble==4) then
  if(print_msg) then
   print*,'Activating random temperature perturbation'
   print*,'at z=2, linearly-decreasing to 0K over 500m'
@@ -657,13 +659,8 @@ elseif(ibubble==3) then
        do i = 1, m2
          R = bub_rand_nums(i+i0,j+j0)
 
-         !Default perturbations amplitude of 0.1K, largest at level 2,
-         !decreased linearly over 500m.
-         R = R*0.1*(500.+zt(2)-zt(k))/500.
-
-         !RCE perturbations amplitude of "rce_bubl", largest at level 2,
-         !decreased linearly over 500m. Override default.
-         if(irce == 1) R = R*rce_bubl*(500.+zt(2)-zt(k))/500.
+         ! Changed from base rams so that RCE_BUBL controls perturbation amplitude whether or not IRCE is on
+         R = R*rce_bubl*(500.+zt(2)-zt(k))/500.
 
          thp(k,i,j)=thp(k,i,j) + R
          if(k==2) thp(1,i,j)=thp(k,i,j) ! set level 1 to level 2
@@ -673,7 +670,6 @@ elseif(ibubble==3) then
      deallocate(bub_rand_nums)
    endif ! in lowest 500 m
  enddo ! k
-
 endif
 
 return

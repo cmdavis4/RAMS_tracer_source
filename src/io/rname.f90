@@ -62,6 +62,7 @@ DATA INDAT/  &
      ,'ISFCL','IFREESLIP','SIBFILE','CO2_INIT','ISOILDAT','SNUDCENT'     &
      ,'ISNOWDAT','NVGCON','PCTLCON','NSLCON','ZROUGH','ALBEDO','SEATMP'  &
      ,'DTHCON','DRTCON','SLZ','SLMSTR','STGOFF','IDIFFK','IDIFFPERTS'    &
+     ,'IFLUXSTART','IFLUXMAX','IFLUXDECAY','IFLUXEND'                     &
      ,'IHORGRAD','CSX','CSZ','XKHKM','ZKHKM','AKMIN','IBUBBLE','IBUBGRD' &
      ,'IBDXIA','IBDXIZ','IBDYJA','IBDYJZ','IBDZK1','IBDZK2','BTHP'       &
      ,'BRTP','ICONV','ICONGR','ICICENT','ICJCENT','CXRAD','CYRAD'        &
@@ -301,6 +302,10 @@ IF(GROUP.EQ.'$MODEL_OPTIONS') THEN
  IF(VR.EQ.'IBDZK2')       CALL varseti (VR,IBDZK2,NV,1,II,1,300)
  IF(VR.EQ.'BTHP')         CALL varsetf (VR,BTHP,NV,1,FF,-20.,20.)
  IF(VR.EQ.'BRTP')         CALL varsetf (VR,BRTP,NV,1,FF,-1.,10.)
+ IF(VR.EQ.'IFLUXSTART')   CALL varseti (VR,IFLUXSTART,NV,1,II,0,999999)
+ IF(VR.EQ.'IFLUXMAX')     CALL varseti (VR,IFLUXMAX,NV,1,II,0,999999)
+ IF(VR.EQ.'IFLUXDECAY')   CALL varseti (VR,IFLUXDECAY,NV,1,II,0,999999)
+ IF(VR.EQ.'IFLUXEND')     CALL varseti (VR,IFLUXEND,NV,1,II,0,999999)
  IF(VR.EQ.'ICONV')        CALL varseti (VR,ICONV,NV,1,II,0,5)
  IF(VR.EQ.'ICONGR')       CALL varseti (VR,ICONGR,NV,1,II,0,10)
  IF(VR.EQ.'ICICENT')      CALL varseti (VR,ICICENT,NV,1,II,1,3000)
@@ -586,6 +591,10 @@ WRITE(6,'(100(3(A15,E11.4)/))')      &
  ,'DRTCON=',DRTCON                   &
  ,'BTHP=',BTHP                       &
  ,'BRTP=',BRTP                       &
+ ,'IFLUXSTART=',IFLUXSTART           &
+ ,'IFLUXMAX=',IFLUXMAX               &
+ ,'IFLUXDECAY=',IFLUXDECAY           &
+ ,'IFLUXEND=',IFLUXEND               &
  ,'CXRAD=',CXRAD                     &
  ,'CYRAD=',CYRAD                     &
  ,'CZRAD=',CZRAD                     &

@@ -164,6 +164,13 @@ do j = ja,jz
      leaf%patch_area(i,j,2) = pctlcon
   endif
 
+! Apply surface flux forcing if IBUBBLE=5
+  if(ibubble.eq.5 .and. ngrid.eq.ibubgrd) then
+    CALL surface_flux_forcing (mzp,mxp,myp,i0,j0 &
+                              ,turb%sflux_t(1,1),turb%sflux_r(1,1) &
+                              ,basic_g(ngrid)%dn0(2,1,1),time)
+  endif
+
 ! Begin patch loop
   do ip = 1,np
 

@@ -798,3 +798,145 @@ enddo ! j loop
 
 return
 END SUBROUTINE conv_forcing
+
+!##############################################################################
+Subroutine surface_flux_forcing (m1,m2,m3,i0,j0,sflux_t,sflux_r,dn0,time)
+
+use micphys
+use mem_grid
+use rconstants  ! For cp, alvl
+use node_mod, only: my_rams_num, mainnum, nmachs
+
+implicit none
+
+integer :: m1,m2,m3,i0,j0
+real, dimension(m2,m3) :: sflux_t,sflux_r,dn0  ! Added dn0 (air density at surface)
+real :: time
+
+integer :: i,j,ii,jj
+real :: bubctrx,bubctry,bubradx,bubrady
+real :: acetmp1,acetmp2,acetmp4,acetmp5,acetmp7,acetmp8,acetmp9
+real :: sensible_flux_wm2,latent_flux_wm2,flux_t_kin,flux_r_kin,temporal_factor
+
+! Return if not using surface flux forcing
+if(ibubble.ne.5) return
+
+! Print info at initialization
+if(time.le.0.0 .and. print_msg) then
+  print*,''
+  print*,'INITIALIZING SURFACE FLUX FORCING (IBUBBLE=5)'
+  print*,'On grid number=',IBUBGRD
+  print*,'Flux center from I=',IBDXIA,'TO',IBDXIZ
+  print*,'Flux center from J=',IBDYJA,'TO',IBDYJZ
+  print*,'Max sensible heat flux=',BTHP,' W/m²'
+  print*,'Max latent heat flux=',BRTP,' W/m²'
+  print*,'Flux start time=',IFLUXSTART,' s'
+  print*,'Flux max time=',IFLUXMAX,' s'
+  print*,'Flux decay time=',IFLUXDECAY,' s'
+  print*,'Flux end time=',IFLUXEND,' s'
+  print*,''
+endif
+
+! Calculate temporal evolution factor
+if(time.lt.real(ifluxstart)) then
+  temporal_factor = 0.0
+elseif(time.ge.real(ifluxstart) .and. time.lt.real(ifluxmax)) then
+  ! Linear ramp up
+  if(ifluxmax.gt.ifluxstart) then
+    temporal_factor = (time - real(ifluxstart)) / real(ifluxmax - ifluxstart)
+  else
+    temporal_factor = 1.0
+  endif
+elseif(time.ge.real(ifluxmax) .and. time.lt.real(ifluxdecay)) then
+  ! Constant maximum
+  temporal_factor = 1.0
+elseif(time.ge.real(ifluxdecay) .and. time.lt.real(ifluxend)) then
+  ! Linear ramp down
+  if(ifluxend.gt.ifluxdecay) then
+    temporal_factor = 1.0 - (time - real(ifluxdecay)) / real(ifluxend - ifluxdecay)
+  else
+    temporal_factor = 0.0
+  endif
+else
+  ! After end time
+  temporal_factor = 0.0
+endif
+
+! Return if temporal factor is zero (no fluxes)
+if(temporal_factor.le.0.0) return
+
+! Set up X location of flux center relative to grid center
+bubctrx = deltax * ( (IBDXIA+IBDXIZ)/2.0 - NNXP(1)/2.0 )
+! Set up Y location of flux center relative to grid center
+bubctry = deltax * ( (IBDYJA+IBDYJZ)/2.0 - NNYP(1)/2.0 )
+
+! Set up length and width of flux region
+if((IBDXIZ-IBDXIA).gt.0) then
+  bubradx=(IBDXIZ-IBDXIA) * deltax * 0.5
+else
+  bubradx=0.0  ! Infinite in x-direction
+endif
+
+if((IBDYJZ-IBDYJA).gt.0) then
+  bubrady=(IBDYJZ-IBDYJA) * deltax * 0.5
+else
+  bubrady=0.0  ! Infinite in y-direction
+endif
+
+! Set up gaussian shape (cos^2 profile like IBUBBLE=2)
+acetmp8=atan(1.0)*4.0/2.0 ! pi/2
+
+! Calculate spatially-varying fluxes
+do j=1,m3
+  do i=1,m2
+    ! Get grid point center coordinates
+    acetmp1=(XMN(i+i0,1)+XMN(i+i0+1,1))*0.5
+    acetmp2=(YMN(j+j0,1)+YMN(j+j0+1,1))*0.5
+
+    ! Calculate normalized distance from center in x
+    if (bubradx.gt.0.0) then
+      acetmp4=(acetmp1-bubctrx)/bubradx
+      acetmp4=acetmp4**2
+    else
+      acetmp4=0.0  ! Infinite extent
+    endif
+
+    ! Calculate normalized distance from center in y
+    if (bubrady.gt.0.0) then
+      acetmp5=(acetmp2-bubctry)/bubrady
+      acetmp5=acetmp5**2
+    else
+      acetmp5=0.0  ! Infinite extent
+    endif
+
+    ! For 2D simulation let Y-dir = X-dir
+    if(jdim==0) acetmp5=acetmp4
+
+    ! Calculate radial distance
+    acetmp7=sqrt(acetmp4+acetmp5)
+
+    ! Apply cosine-squared profile
+    if(acetmp7.ge.1.0)then
+      acetmp9=0.0
+    else
+      acetmp9=(COS(acetmp8*acetmp7))**2
+    endif
+
+    ! Apply spatial and temporal modulation to maximum flux values (W/m²)
+    sensible_flux_wm2 = BTHP * acetmp9 * temporal_factor  ! W/m²
+    latent_flux_wm2   = BRTP * acetmp9 * temporal_factor  ! W/m²
+
+    ! Convert from W/m² to kinematic fluxes for surface layer scheme
+    ! Sensible heat flux: Q_H / (ρ * cp) gives kinematic heat flux (K m/s)
+    ! Latent heat flux:   Q_E / (ρ * L_v) gives kinematic moisture flux (kg/kg m/s)
+    flux_t_kin = sensible_flux_wm2 / (dn0(i,j) * cp)     ! K m/s
+    flux_r_kin = latent_flux_wm2   / (dn0(i,j) * alvl)   ! kg/kg m/s
+
+    ! Set surface fluxes (additive to any existing fluxes)
+    sflux_t(i,j) = sflux_t(i,j) + flux_t_kin
+    sflux_r(i,j) = sflux_r(i,j) + flux_r_kin
+  enddo
+enddo
+
+return
+END SUBROUTINE surface_flux_forcing

@@ -125,6 +125,9 @@ real, dimension(nzpmax) :: xdust1cldrt,xdust2cldrt,xdust1drzrt,xdust2drzrt
 integer :: ibubble,ibubgrd,ibdxia,ibdxiz,ibdyja,ibdyjz,ibdzk1,ibdzk2
 real :: bthp,brtp
 
+!******Variables Needed for SURFACE FLUX FORCING ****************************
+integer :: ifluxstart,ifluxmax,ifluxdecay,ifluxend
+
 !******Variables Needed for CONVERGENCE FORCING ****************************
 integer :: iconv,icongr,icicent,icjcent,icvert,ickmax,ickcent
 real :: cxrad,cyrad,czrad,cdivmax,ctau,ctmax

@@ -386,7 +386,26 @@
 
    DTHCON   = 0.,            ! Constant sfc layer  temp grad for no soil
    DRTCON   = 0.,            ! Constant sfc layer moist grad for no soil
-   
+
+!----- Surface flux forcing parameters (used when IBUBBLE=5) ----------------
+
+   IFLUXSTART = 0,           ! Start time for surface flux forcing (seconds)
+   IFLUXMAX   = 0,           ! Time when fluxes reach maximum (seconds)
+   IFLUXDECAY = 0,           ! Time when fluxes begin to decay (seconds)
+   IFLUXEND   = 0,           ! Time when fluxes end (seconds)
+
+! Note: When IBUBBLE=5, surface heat and moisture fluxes are applied with:
+!   - 2D Gaussian spatial distribution (like IBUBBLE=2)
+!   - Spatial extent controlled by IBDXIA, IBDXIZ, IBDYJA, IBDYJZ
+!   - Maximum amplitudes set by BTHP (sensible heat flux, W/m²) and
+!                                  BRTP (latent heat flux, W/m²)
+!   - Fluxes are converted internally to kinematic fluxes using air density
+!   - Typical values: BTHP = 50-500 W/m², BRTP = 100-600 W/m²
+!   - Temporal evolution:
+!       * Linear increase from 0 (at IFLUXSTART) to max (at IFLUXMAX)
+!       * Constant at maximum (from IFLUXMAX to IFLUXDECAY)
+!       * Linear decrease to 0 (from IFLUXDECAY to IFLUXEND)
+
    SLZ      = -.50,-.40,-.30,-.25,-.20,-.16,-.12,-.09,-.06,-.03,-.01,
                              ! Soil grid levels
 

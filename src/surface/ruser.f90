@@ -803,7 +803,7 @@ END SUBROUTINE conv_forcing
 Subroutine surface_flux_forcing (m1,m2,m3,i0,j0,sflux_t,sflux_r,dn0,time)
 
 use micphys
-use mem_grid
+use mem_grid, only: deltax, jdim, print_msg, nnxp, nnyp, xmn, ymn
 use rconstants  ! For cp, alvl
 use node_mod, only: my_rams_num, mainnum, nmachs
 

@@ -27,6 +27,8 @@ Subroutine leaf3_sib (m1,m2,m3,mzg,mzs,np,ia,iz,ja,jz   &
 use mem_all
 use leaf_coms
 use rconstants
+use node_mod, only: i0, j0
+
 
 implicit none
 
@@ -166,7 +168,7 @@ do j = ja,jz
 
 ! Apply surface flux forcing if IBUBBLE=5
   if(ibubble.eq.5 .and. ngrid.eq.ibubgrd) then
-    CALL surface_flux_forcing (mzp,mxp,myp,i0,j0 &
+    CALL surface_flux_forcing (m1,m2,m3,i0,j0 &
                               ,turb%sflux_t(1,1),turb%sflux_r(1,1) &
                               ,basic_g(ngrid)%dn0(2,1,1),time)
   endif

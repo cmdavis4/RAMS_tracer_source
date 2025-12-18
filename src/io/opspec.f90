@@ -712,13 +712,35 @@ IF( ((icloud .GE. 2 .AND. icloud .LE. 4 .AND. cparm .LE. 0.)  &
    IFATERR=IFATERR+1
 ENDIF
 
-IF(ibubble.lt.0 .or. ibubble.gt.4) then
-   PRINT*,' FATAL - IBUBBLE must be 0, 1, 2, or 3'
+IF(ibubble.lt.0 .or. ibubble.gt.5) then
+   PRINT*,' FATAL - IBUBBLE must be 0, 1, 2, 3, 4, or 5'
    PRINT*,'         0 = off'
    PRINT*,'         1 = RAMSIN-set square bubble'
    PRINT*,'         2 = RAMSIN-set gaussian bubble'
    PRINT*,'         3 = Random bubble in ruser'
+   PRINT*,'         4 = Combination of 2 and 3'
+   PRINT*,'         5 = Volumetric heating forcing'
    IFATERR=IFATERR+1
+ENDIF
+
+IF(ibubble.eq.5) then
+   IF(ifluxstart.lt.0 .or. ifluxmax.lt.0 .or. &
+      ifluxdecay.lt.0 .or. ifluxend.lt.0) then
+      PRINT*,' FATAL - All flux timing parameters must be >= 0'
+      IFATERR=IFATERR+1
+   ENDIF
+   IF(ifluxmax.lt.ifluxstart) then
+      PRINT*,' FATAL - IFLUXMAX must be >= IFLUXSTART'
+      IFATERR=IFATERR+1
+   ENDIF
+   IF(ifluxdecay.lt.ifluxmax) then
+      PRINT*,' FATAL - IFLUXDECAY must be >= IFLUXMAX'
+      IFATERR=IFATERR+1
+   ENDIF
+   IF(ifluxend.lt.ifluxdecay) then
+      PRINT*,' FATAL - IFLUXEND must be >= IFLUXDECAY'
+      IFATERR=IFATERR+1
+   ENDIF
 ENDIF
 
 IF(iconv.lt.0 .or. iconv.gt.5) then

@@ -798,3 +798,154 @@ enddo ! j loop
 
 return
 END SUBROUTINE conv_forcing
+
+!##############################################################################
+Subroutine volumetric_heating (tht,dn0,rtgt)
+
+use micphys
+use mem_grid, only: deltax, deltaz, jdim, print_msg, time, nnxp, nnyp, xmn, ymn, zmn, ngrid
+use rconstants, only: cp
+use node_mod, only: mynum, mxp, myp, mzp, ia, iz, ja, jz, i0, j0
+
+implicit none
+
+real, dimension(mzp,mxp,myp) :: tht,dn0
+real, dimension(mxp,myp) :: rtgt
+
+integer :: i,j,k
+real :: bubctrx,bubctry,bubradx,bubrady,atten_length
+real :: x_pos,y_pos,z_pos
+real :: dist_x,dist_y,r_horiz
+real :: horiz_gauss,vert_decay
+real :: heating_wm2,heating_rate
+real :: temporal_factor,dz_meters
+
+! Return if not using volumetric heating
+if(ibubble.ne.5) return
+
+! Print info at initialization
+if(time.le.0.0 .and. print_msg .and. mynum.eq.1) then
+  print*,''
+  print*,'INITIALIZING VOLUMETRIC HEATING FORCING (IBUBBLE=5)'
+  print*,'On grid number=',ngrid
+  print*,'Flux center from I=',IBDXIA,'TO',IBDXIZ
+  print*,'Flux center from J=',IBDYJA,'TO',IBDYJZ
+  print*,'Vertical attenuation length at K=',IBDZK2
+  print*,'Max heating amplitude=',BTHP,' W/m²'
+  print*,'Flux start time=',IFLUXSTART,' s'
+  print*,'Flux max time=',IFLUXMAX,' s'
+  print*,'Flux decay time=',IFLUXDECAY,' s'
+  print*,'Flux end time=',IFLUXEND,' s'
+  print*,''
+endif
+
+! Calculate temporal evolution factor
+if(time.lt.real(ifluxstart)) then
+  temporal_factor = 0.0
+elseif(time.ge.real(ifluxstart) .and. time.lt.real(ifluxmax)) then
+  ! Linear ramp up
+  if(ifluxmax.gt.ifluxstart) then
+    temporal_factor = (time - real(ifluxstart)) / real(ifluxmax - ifluxstart)
+  else
+    temporal_factor = 1.0
+  endif
+elseif(time.ge.real(ifluxmax) .and. time.lt.real(ifluxdecay)) then
+  ! Constant maximum
+  temporal_factor = 1.0
+elseif(time.ge.real(ifluxdecay) .and. time.lt.real(ifluxend)) then
+  ! Linear ramp down
+  if(ifluxend.gt.ifluxdecay) then
+    temporal_factor = 1.0 - (time - real(ifluxdecay)) / real(ifluxend - ifluxdecay)
+  else
+    temporal_factor = 0.0
+  endif
+else
+  ! After end time
+  temporal_factor = 0.0
+endif
+
+! Return if temporal factor is zero (no heating)
+if(temporal_factor.le.0.0) return
+
+! Set up X location of heating center relative to grid center
+bubctrx = deltax * ( (IBDXIA+IBDXIZ)/2.0 - NNXP(ngrid)/2.0 )
+! Set up Y location of heating center relative to grid center
+bubctry = deltax * ( (IBDYJA+IBDYJZ)/2.0 - NNYP(ngrid)/2.0 )
+
+! Set up horizontal extent (sigma in the paper)
+if((IBDXIZ-IBDXIA).gt.0) then
+  bubradx = (IBDXIZ-IBDXIA) * deltax * 0.5
+else
+  bubradx = 0.0  ! Infinite in x-direction
+endif
+
+if((IBDYJZ-IBDYJA).gt.0) then
+  bubrady = (IBDYJZ-IBDYJA) * deltax * 0.5
+else
+  bubrady = 0.0  ! Infinite in y-direction
+endif
+
+! Set attenuation length for vertical decay (alpha in the paper)
+! IBDZK2 sets the altitude of the e-folding scale
+atten_length = ZMN(IBDZK2,ngrid)
+
+! Calculate heating at each grid point
+do k=2,mzp  ! Start at k=2 (lowest model level)
+  do j=ja,jz
+    do i=ia,iz
+      ! Get grid point center coordinates
+      x_pos = (XMN(i+i0,ngrid) + XMN(i+i0+1,ngrid)) * 0.5
+      y_pos = (YMN(j+j0,ngrid) + YMN(j+j0+1,ngrid)) * 0.5
+      z_pos = (ZMN(k,ngrid) + ZMN(k+1,ngrid)) * 0.5
+
+      ! Calculate horizontal distance from center
+      if (bubradx.gt.0.0) then
+        dist_x = (x_pos - bubctrx) / bubradx
+      else
+        dist_x = 0.0
+      endif
+
+      if (bubrady.gt.0.0) then
+        dist_y = (y_pos - bubctry) / bubrady
+      else
+        dist_y = 0.0
+      endif
+
+      ! For 2D simulation let Y-dir = X-dir
+      if(jdim==0) dist_y = dist_x
+
+      ! Calculate radial distance (normalized by sigma)
+      r_horiz = sqrt(dist_x**2 + dist_y**2)
+
+      ! Horizontal Gaussian: exp(-r²/σ²) = exp(-r_normalized²)
+      horiz_gauss = exp(-r_horiz**2)
+
+      ! Vertical exponential decay: exp(-z/α)
+      if(atten_length.gt.0.0) then
+        vert_decay = exp(-z_pos / atten_length)
+      else
+        vert_decay = 0.0
+      endif
+
+      ! Combined 3D heating distribution in W/m²
+      heating_wm2 = BTHP * horiz_gauss * vert_decay * temporal_factor
+
+      ! Convert W/m² to heating rate (K/s)
+      ! Formula: dT/dt = Q / (ρ × Δz × cp)
+      ! where Q is in W/m², ρ is density, Δz is layer thickness, cp is specific heat
+
+      ! Get layer thickness at this grid point
+      dz_meters = (ZMN(k+1,ngrid) - ZMN(k,ngrid)) / rtgt(i-ia+1,j-ja+1)
+
+      ! Calculate heating rate
+      heating_rate = heating_wm2 / (dn0(k,i-ia+1,j-ja+1) * dz_meters * cp)
+
+      ! Add to temperature tendency
+      tht(k,i-ia+1,j-ja+1) = tht(k,i-ia+1,j-ja+1) + heating_rate
+
+    enddo
+  enddo
+enddo
+
+return
+END SUBROUTINE volumetric_heating

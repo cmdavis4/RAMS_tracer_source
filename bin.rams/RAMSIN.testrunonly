@@ -431,18 +431,27 @@
                              !   criteria. Value of 0.0 uses original formula
                              !   and only cloud water is required.
 !------Bubble Simulation--------------------------------------------------
-   IBUBBLE = 1,              ! Bubble initialization: 0 = off    
+   IBUBBLE = 1,              ! Bubble initialization: 0 = off
                              ! 1=square bubble, 2=gaussian bubble
                              ! 3=random perturbations (user adjust ruser.f90)
+                             ! 4=surface flux forcing
+                             ! 5=volumetric heating forcing
    IBUBGRD = 1,              ! Grid Number On Which To Initialize Bubble
    IBDXIA  = 5,              ! DX start grid point
    IBDXIZ  = 13,             ! DX end grid point
    IBDYJA  = 5,              ! DY start grid point
    IBDYJZ  = 13,             ! DY end grid point
    IBDZK1  = 2,              ! Lower k level
-   IBDZK2  = 16,             ! Upper k level
+   IBDZK2  = 16,             ! Upper k level (for vol. heating: e-folding height)
    BTHP    = 3.0,            ! Theta-il perturbation(K) (THP + BTHP)
+                             ! For vol. heating: max heating rate (W/m^2)
    BRTP    = 0.2,            ! Mixing ratio perturbation (RTP * (1 + BRTP)
+
+!------Volumetric Heating Forcing (IBUBBLE=5) --------------------------------
+   IFLUXSTART = 0,           ! Time (s) when heating starts ramping up
+   IFLUXMAX   = 600,         ! Time (s) when heating reaches maximum
+   IFLUXDECAY = 1200,        ! Time (s) when heating starts ramping down
+   IFLUXEND   = 1800,        ! Time (s) when heating ends
 
 !------Convergence Forcing -----------------------------------------------
    ICONV = 0,              ! Convergence Zone initialization: 0 = off

@@ -25,7 +25,7 @@ character(len=*) :: group,vr,cc
 real :: ff
 integer :: ii,nv
 integer :: inrflg
-integer, parameter ::nvgrid=37,nvstrt=77,nvindat=147,nvsound=10
+integer, parameter ::nvgrid=37,nvstrt=77,nvindat=151,nvsound=10
 integer ::  igrids(nvgrid),istart(nvstrt),iindat(nvindat),isound(nvsound)
 character(len=16) :: grids(nvgrid),start(nvstrt),indat(nvindat),sound(nvsound)
 data igrids/nvgrid*0/,istart/nvstrt*0/,iindat/nvindat*0/,isound/nvsound*0/
@@ -64,7 +64,8 @@ DATA INDAT/  &
      ,'DTHCON','DRTCON','SLZ','SLMSTR','STGOFF','IDIFFK','IDIFFPERTS'    &
      ,'IHORGRAD','CSX','CSZ','XKHKM','ZKHKM','AKMIN','IBUBBLE','IBUBGRD' &
      ,'IBDXIA','IBDXIZ','IBDYJA','IBDYJZ','IBDZK1','IBDZK2','BTHP'       &
-     ,'BRTP','ICONV','ICONGR','ICICENT','ICJCENT','CXRAD','CYRAD'        &
+     ,'BRTP','IFLUXSTART','IFLUXMAX','IFLUXDECAY','IFLUXEND'             &
+     ,'ICONV','ICONGR','ICICENT','ICJCENT','CXRAD','CYRAD'               &
      ,'ICVERT','ICKMAX','CZRAD','ICKCENT','CDIVMAX','CTAU','CTMAX'       &
      ,'IRCE','RCE_SZEN','RCE_SOLC','RCE_UBMN','RCE_BUBL','LEVEL','ISCM'  &
      ,'ICHECKMIC','ITRACER','ITRACHIST','IMBUDGET','IRIME','IPLAWS'      &
@@ -291,7 +292,7 @@ IF(GROUP.EQ.'$MODEL_OPTIONS') THEN
  IF(VR.EQ.'ZKHKM')        CALL varsetf (VR,ZKHKM(NV),NV,MAXGRDS,FF,0.,100.)
  IF(VR.EQ.'AKMIN')        CALL varsetf (VR,AKMIN(NV),NV,MAXGRDS,FF,0.,5.)
  IF(VR.EQ.'FRACSAT')      CALL varsetf (VR,FRACSAT,NV,1,FF,0.000,999.000)
- IF(VR.EQ.'IBUBBLE')      CALL varseti (VR,IBUBBLE,NV,1,II,0,4)
+ IF(VR.EQ.'IBUBBLE')      CALL varseti (VR,IBUBBLE,NV,1,II,0,5)
  IF(VR.EQ.'IBUBGRD')      CALL varseti (VR,IBUBGRD,NV,1,II,1,10)
  IF(VR.EQ.'IBDXIA')       CALL varseti (VR,IBDXIA,NV,1,II,1,3000)
  IF(VR.EQ.'IBDXIZ')       CALL varseti (VR,IBDXIZ,NV,1,II,1,3000)
@@ -299,8 +300,12 @@ IF(GROUP.EQ.'$MODEL_OPTIONS') THEN
  IF(VR.EQ.'IBDYJZ')       CALL varseti (VR,IBDYJZ,NV,1,II,1,3000)
  IF(VR.EQ.'IBDZK1')       CALL varseti (VR,IBDZK1,NV,1,II,1,300)
  IF(VR.EQ.'IBDZK2')       CALL varseti (VR,IBDZK2,NV,1,II,1,300)
- IF(VR.EQ.'BTHP')         CALL varsetf (VR,BTHP,NV,1,FF,-20.,20.)
- IF(VR.EQ.'BRTP')         CALL varsetf (VR,BRTP,NV,1,FF,-1.,10.)
+ IF(VR.EQ.'BTHP')         CALL varsetf (VR,BTHP,NV,1,FF,-9999.,9999.)
+ IF(VR.EQ.'BRTP')         CALL varsetf (VR,BRTP,NV,1,FF,-9999.,9999.)
+ IF(VR.EQ.'IFLUXSTART')   CALL varseti (VR,IFLUXSTART,NV,1,II,0,999999)
+ IF(VR.EQ.'IFLUXMAX')     CALL varseti (VR,IFLUXMAX,NV,1,II,0,999999)
+ IF(VR.EQ.'IFLUXDECAY')   CALL varseti (VR,IFLUXDECAY,NV,1,II,0,999999)
+ IF(VR.EQ.'IFLUXEND')     CALL varseti (VR,IFLUXEND,NV,1,II,0,999999)
  IF(VR.EQ.'ICONV')        CALL varseti (VR,ICONV,NV,1,II,0,5)
  IF(VR.EQ.'ICONGR')       CALL varseti (VR,ICONGR,NV,1,II,0,10)
  IF(VR.EQ.'ICICENT')      CALL varseti (VR,ICICENT,NV,1,II,1,3000)
@@ -586,6 +591,10 @@ WRITE(6,'(100(3(A15,E11.4)/))')      &
  ,'DRTCON=',DRTCON                   &
  ,'BTHP=',BTHP                       &
  ,'BRTP=',BRTP                       &
+ ,'IFLUXSTART=',IFLUXSTART           &
+ ,'IFLUXMAX=',IFLUXMAX               &
+ ,'IFLUXDECAY=',IFLUXDECAY           &
+ ,'IFLUXEND=',IFLUXEND               &
  ,'CXRAD=',CXRAD                     &
  ,'CYRAD=',CYRAD                     &
  ,'CZRAD=',CZRAD                     &

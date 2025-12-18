@@ -38,7 +38,7 @@ if(ICONV > 0 .and. ICONGR == ngrid) &
 
 !Volumetric heating forcing
 if(IBUBBLE == 5 .and. IBUBGRD == ngrid) &
-  CALL volumetric_heating (tend%pt(1),basic_g(ngrid)%dn0(1,1,1),basic_g(ngrid)%rtgt(1,1))
+  CALL volumetric_heating (tend%pt(1),basic_g(ngrid)%dn0(1,1,1),grid_g(ngrid)%rtgt(1,1))
 
 return
 END SUBROUTINE tend0

@@ -805,7 +805,7 @@ Subroutine volumetric_heating (tht,dn0,rtgt)
 use micphys
 use mem_grid, only: deltax, deltaz, jdim, print_msg, time, nnxp, nnyp, xmn, ymn, zmn, ngrid
 use rconstants, only: cp
-use node_mod, only: mynum, mxp, myp, mzp, ia, iz, ja, jz, i0, j0
+use node_mod, only: my_rams_num, mxp, myp, mzp, ia, iz, ja, jz, i0, j0
 
 implicit none
 
@@ -824,7 +824,7 @@ real :: temporal_factor,dz_meters
 if(ibubble.ne.5) return
 
 ! Print info at initialization
-if(time.le.0.0 .and. print_msg .and. mynum.eq.1) then
+if(time.le.0.0 .and. print_msg .and. my_rams_num.eq.1) then
   print*,''
   print*,'INITIALIZING VOLUMETRIC HEATING FORCING (IBUBBLE=5)'
   print*,'On grid number=',ngrid
@@ -917,10 +917,10 @@ do k=2,mzp  ! Start at k=2 (lowest model level)
       ! Calculate radial distance (normalized by sigma)
       r_horiz = sqrt(dist_x**2 + dist_y**2)
 
-      ! Horizontal Gaussian: exp(-r²/σ²) = exp(-r_normalized²)
+      ! Horizontal Gaussian: exp(-r_normalized²)
       horiz_gauss = exp(-r_horiz**2)
 
-      ! Vertical exponential decay: exp(-z/α)
+      ! Vertical exponential decay
       if(atten_length.gt.0.0) then
         vert_decay = exp(-z_pos / atten_length)
       else

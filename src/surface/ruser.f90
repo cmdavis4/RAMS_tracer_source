@@ -819,6 +819,8 @@ real :: dist_x,dist_y,r_horiz
 real :: horiz_gauss,vert_decay
 real :: heating_wm2,heating_rate
 real :: temporal_factor,dz_meters
+real :: max_heating_wm2,max_heating_rate,max_tendency,max_dz,max_dn0
+integer :: max_i,max_j,max_k
 
 ! Return if not using volumetric heating
 if(ibubble.ne.5) return
@@ -836,6 +838,8 @@ if(time.le.0.0 .and. print_msg .and. my_rams_num.eq.1) then
   print*,'Flux max time=',IFLUXMAX,' s'
   print*,'Flux decay time=',IFLUXDECAY,' s'
   print*,'Flux end time=',IFLUXEND,' s'
+  print*,'Grid spacing deltax=',deltax,' m'
+  print*,'Grid spacing deltaz=',deltaz,' m'
   print*,''
 endif
 
@@ -888,6 +892,25 @@ endif
 ! Set attenuation length for vertical decay (alpha in the paper)
 ! IBDZK2 sets the altitude of the e-folding scale
 atten_length = ZMN(IBDZK2,ngrid)
+
+! Debug output at specific times
+if(print_msg .and. my_rams_num.eq.1 .and. &
+   (abs(time-300.0).lt.0.1 .or. abs(time-600.0).lt.0.1 .or. abs(time-1200.0).lt.0.1)) then
+  print*,''
+  print*,'VOLUMETRIC HEATING DEBUG at time=',time,' s'
+  print*,'  temporal_factor=',temporal_factor
+  print*,'  bubctrx=',bubctrx,' m, bubctry=',bubctry,' m'
+  print*,'  bubradx=',bubradx,' m, bubrady=',bubrady,' m'
+  print*,'  atten_length=',atten_length,' m'
+endif
+
+! Initialize max tracking
+max_heating_wm2 = 0.0
+max_heating_rate = 0.0
+max_tendency = 0.0
+max_i = 0
+max_j = 0
+max_k = 0
 
 ! Calculate heating at each grid point
 do k=2,mzp  ! Start at k=2 (lowest model level)
@@ -943,9 +966,33 @@ do k=2,mzp  ! Start at k=2 (lowest model level)
       ! Add to temperature tendency
       tht(k,i-ia+1,j-ja+1) = tht(k,i-ia+1,j-ja+1) + heating_rate
 
+      ! Track maximum values
+      if(abs(heating_wm2).gt.abs(max_heating_wm2)) then
+        max_heating_wm2 = heating_wm2
+        max_heating_rate = heating_rate
+        max_tendency = tht(k,i-ia+1,j-ja+1)
+        max_dz = dz_meters
+        max_dn0 = dn0(k,i-ia+1,j-ja+1)
+        max_i = i+i0
+        max_j = j+j0
+        max_k = k
+      endif
+
     enddo
   enddo
 enddo
+
+! Debug output at specific times
+if(print_msg .and. my_rams_num.eq.1 .and. &
+   (abs(time-1.0).lt.0.1 .or. abs(time-300.0).lt.0.1 .or. &
+    abs(time-600.0).lt.0.1 .or. abs(time-1200.0).lt.0.1)) then
+  print*,'  Max heating_wm2=',max_heating_wm2,' W/m² at i,j,k=',max_i,max_j,max_k
+  print*,'  Max heating_rate=',max_heating_rate,' K/s'
+  print*,'  Resulting tendency=',max_tendency,' K/s'
+  print*,'  At that point: dn0=',max_dn0,' kg/m³, dz=',max_dz,' m'
+  print*,'  Check: heating_wm2/(dn0*dz*cp) = ',max_heating_wm2/(max_dn0*max_dz*cp)
+  print*,''
+endif
 
 return
 END SUBROUTINE volumetric_heating

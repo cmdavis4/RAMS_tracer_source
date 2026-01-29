@@ -519,6 +519,7 @@ real acetmp6,acetmp7,acetmp8,acetmp9
 real bubctrx,bubctry,bubctrz
 real bubradx,bubrady,bubradz
 real, dimension(:,:), allocatable :: bub_rand_nums
+real random_perturbation_max_z
 
 if(ibubble==1) then
  if(print_msg) then
@@ -613,9 +614,13 @@ if(ibubble==2 .or. ibubble==4) then
 endif
 
 if(ibubble==3 .or. ibubble==4) then
+
+  ! Set perturbation depth
+  random_perturbation_max_z = 2000  ! m
+
  if(print_msg) then
   print*,'Activating random temperature perturbation'
-  print*,'at z=2, linearly-decreasing to 0K over 500m'
+  print*,'at z=2, linearly-decreasing to 0K over ',random_perturbation_max_z,'m'
   print*,'On grid number=',IBUBGRD
   if(irce==1)then 
      print*,'With Max amplitude',rce_bubl
@@ -634,7 +639,7 @@ if(ibubble==3 .or. ibubble==4) then
 
  do k=2,m1
    ! select levels for temp. pert. based on altitude
-   if( zt(k) <= (500.+zt(2)) ) then ! only over lowest 500 m
+   if( zt(k) <= (random_perturbation_max_z+zt(2)) ) then ! only over layer specified
      ! allocate memory for entire horizontal domain
      allocate(bub_rand_nums(nnxp(ibubgrd), nnyp(ibubgrd)))
 
@@ -660,7 +665,7 @@ if(ibubble==3 .or. ibubble==4) then
          R = bub_rand_nums(i+i0,j+j0)
 
          ! Changed from base rams so that RCE_BUBL controls perturbation amplitude whether or not IRCE is on
-         R = R*rce_bubl*(500.+zt(2)-zt(k))/500.
+         R = R*rce_bubl*(random_perturbation_max_z+zt(2)-zt(k))/random_perturbation_max_z
 
          thp(k,i,j)=thp(k,i,j) + R
          if(k==2) thp(1,i,j)=thp(k,i,j) ! set level 1 to level 2
@@ -668,7 +673,7 @@ if(ibubble==3 .or. ibubble==4) then
      enddo ! j
 
      deallocate(bub_rand_nums)
-   endif ! in lowest 500 m
+   endif ! in layer specified
  enddo ! k
 endif
 

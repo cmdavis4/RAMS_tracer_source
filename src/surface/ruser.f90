@@ -815,15 +815,52 @@ return
 END SUBROUTINE conv_forcing
 
 !##############################################################################
-Subroutine volumetric_heating (tht,dn0,rtgt)
+Subroutine flux_forcings (tht,dn0,rtgt)
 
 use micphys
-use mem_grid, only: deltax, deltaz, jdim, print_msg, time, nnxp, nnyp, xmn, ymn, zmn, ngrid
-use rconstants, only: cp
-use node_mod, only: my_rams_num, mxp, myp, mzp, ia, iz, ja, jz, i0, j0
+use mem_grid, only: print_msg, time, ngrid
+use node_mod, only: my_rams_num
 
 implicit none
 
+real, dimension(mzp,mxp,myp) :: tht,dn0
+real, dimension(mxp,myp) :: rtgt
+
+integer :: n
+
+! Return if not using flux forcings
+if(nflux_forcings <= 0) return
+
+! Print info at initialization (only once per grid)
+if(time <= 0.0 .and. print_msg .and. my_rams_num == 1) then
+  print*,''
+  print*,'INITIALIZING FLUX FORCING SYSTEM'
+  print*,'Number of forcings =', nflux_forcings
+  print*,''
+endif
+
+! Apply each forcing additively
+do n = 1, nflux_forcings
+  ! Only apply if this forcing is on the current grid
+  if(iflux_grid(n) == ngrid) then
+    CALL apply_single_flux_forcing(n, tht, dn0, rtgt)
+  endif
+enddo
+
+return
+END SUBROUTINE flux_forcings
+
+!##############################################################################
+Subroutine apply_single_flux_forcing (iforcing, tht, dn0, rtgt)
+
+use micphys
+use mem_grid, only: deltax, deltaz, jdim, print_msg, time, nnxp, nnyp, xmn, ymn, zmn, ngrid, dtlt
+use rconstants, only: cp
+use node_mod, only: my_rams_num, mxp, myp, mzp, ia, iz, ja, jz, i0, j0, mainnum, nmachs
+
+implicit none
+
+integer, intent(in) :: iforcing  ! Which forcing to apply (1 to nflux_forcings)
 real, dimension(mzp,mxp,myp) :: tht,dn0
 real, dimension(mxp,myp) :: rtgt
 
@@ -832,49 +869,51 @@ real :: bubctrx,bubctry,bubradx,bubrady,atten_length
 real :: x_pos,y_pos,z_pos
 real :: dist_x,dist_y,r_horiz
 real :: horiz_gauss,vert_decay
-real :: heating_wm2,heating_rate
+real :: heating_wm2,heating_rate,base_heating
 real :: temporal_factor,dz_meters
 real :: max_heating_wm2,max_heating_rate,max_tendency,max_dz,max_dn0
 integer :: max_i,max_j,max_k
-
-! Return if not using volumetric heating
-if(ibubble.ne.5) return
+real :: random_pert, rand_num
+real, dimension(:,:), allocatable :: flux_rand_nums
 
 ! Print info at initialization
-if(time.le.0.0 .and. print_msg .and. my_rams_num.eq.1) then
+if(time <= 0.0 .and. print_msg .and. my_rams_num == 1) then
   print*,''
-  print*,'INITIALIZING VOLUMETRIC HEATING FORCING (IBUBBLE=5)'
-  print*,'On grid number=',ngrid
-  print*,'Flux center from I=',IBDXIA,'TO',IBDXIZ
-  print*,'Flux center from J=',IBDYJA,'TO',IBDYJZ
-  print*,'Vertical attenuation length at K=',IBDZK2
-  print*,'Max heating amplitude=',BTHP,' W/m²'
-  print*,'Flux start time=',IFLUXSTART,' s'
-  print*,'Flux max time=',IFLUXMAX,' s'
-  print*,'Flux decay time=',IFLUXDECAY,' s'
-  print*,'Flux end time=',IFLUXEND,' s'
-  print*,'Grid spacing deltax=',deltax,' m'
-  print*,'Grid spacing deltaz=',deltaz,' m'
+  print*,'FLUX FORCING #',iforcing
+  print*,'On grid number=',iflux_grid(iforcing)
+  print*,'Flux center from I=',iflux_xia(iforcing),'TO',iflux_xiz(iforcing)
+  print*,'Flux center from J=',iflux_yja(iforcing),'TO',iflux_yjz(iforcing)
+  print*,'Vertical attenuation at K=',iflux_k_atten(iforcing)
+  print*,'Max heating amplitude=',flux_amp_wm2(iforcing),' W/m2'
+  print*,'Flux start time=',iflux_tstart(iforcing),' s'
+  print*,'Flux max time=',iflux_tmax(iforcing),' s'
+  print*,'Flux decay time=',iflux_tdecay(iforcing),' s'
+  print*,'Flux end time=',iflux_tend(iforcing),' s'
+  if(iflux_randpert(iforcing) == 1) then
+    print*,'Random perturbations ON, amplitude=',flux_randamp(iforcing),' K'
+  endif
   print*,''
 endif
 
 ! Calculate temporal evolution factor
-if(time.lt.real(ifluxstart)) then
+if(time < real(iflux_tstart(iforcing))) then
   temporal_factor = 0.0
-elseif(time.ge.real(ifluxstart) .and. time.lt.real(ifluxmax)) then
+elseif(time >= real(iflux_tstart(iforcing)) .and. time < real(iflux_tmax(iforcing))) then
   ! Linear ramp up
-  if(ifluxmax.gt.ifluxstart) then
-    temporal_factor = (time - real(ifluxstart)) / real(ifluxmax - ifluxstart)
+  if(iflux_tmax(iforcing) > iflux_tstart(iforcing)) then
+    temporal_factor = (time - real(iflux_tstart(iforcing))) / &
+                      real(iflux_tmax(iforcing) - iflux_tstart(iforcing))
   else
     temporal_factor = 1.0
   endif
-elseif(time.ge.real(ifluxmax) .and. time.lt.real(ifluxdecay)) then
+elseif(time >= real(iflux_tmax(iforcing)) .and. time < real(iflux_tdecay(iforcing))) then
   ! Constant maximum
   temporal_factor = 1.0
-elseif(time.ge.real(ifluxdecay) .and. time.lt.real(ifluxend)) then
+elseif(time >= real(iflux_tdecay(iforcing)) .and. time < real(iflux_tend(iforcing))) then
   ! Linear ramp down
-  if(ifluxend.gt.ifluxdecay) then
-    temporal_factor = 1.0 - (time - real(ifluxdecay)) / real(ifluxend - ifluxdecay)
+  if(iflux_tend(iforcing) > iflux_tdecay(iforcing)) then
+    temporal_factor = 1.0 - (time - real(iflux_tdecay(iforcing))) / &
+                            real(iflux_tend(iforcing) - iflux_tdecay(iforcing))
   else
     temporal_factor = 0.0
   endif
@@ -884,39 +923,47 @@ else
 endif
 
 ! Return if temporal factor is zero (no heating)
-if(temporal_factor.le.0.0) return
+if(temporal_factor <= 0.0) return
 
 ! Set up X location of heating center relative to grid center
-bubctrx = deltax * ( (IBDXIA+IBDXIZ)/2.0 - NNXP(ngrid)/2.0 )
+bubctrx = deltax * ((iflux_xia(iforcing) + iflux_xiz(iforcing))/2.0 - NNXP(ngrid)/2.0)
 ! Set up Y location of heating center relative to grid center
-bubctry = deltax * ( (IBDYJA+IBDYJZ)/2.0 - NNYP(ngrid)/2.0 )
+bubctry = deltax * ((iflux_yja(iforcing) + iflux_yjz(iforcing))/2.0 - NNYP(ngrid)/2.0)
 
 ! Set up horizontal extent (sigma in the paper)
-if((IBDXIZ-IBDXIA).gt.0) then
-  bubradx = (IBDXIZ-IBDXIA) * deltax * 0.5
+if((iflux_xiz(iforcing) - iflux_xia(iforcing)) > 0) then
+  bubradx = (iflux_xiz(iforcing) - iflux_xia(iforcing)) * deltax * 0.5
 else
   bubradx = 0.0  ! Infinite in x-direction
 endif
 
-if((IBDYJZ-IBDYJA).gt.0) then
-  bubrady = (IBDYJZ-IBDYJA) * deltax * 0.5
+if((iflux_yjz(iforcing) - iflux_yja(iforcing)) > 0) then
+  bubrady = (iflux_yjz(iforcing) - iflux_yja(iforcing)) * deltax * 0.5
 else
   bubrady = 0.0  ! Infinite in y-direction
 endif
 
-! Set attenuation length for vertical decay (alpha in the paper)
-! IBDZK2 sets the altitude of the e-folding scale
-atten_length = ZMN(IBDZK2,ngrid)
+! Set attenuation length for vertical decay
+atten_length = ZMN(iflux_k_atten(iforcing), ngrid)
 
-! Debug output at specific times
-if(print_msg .and. my_rams_num.eq.1 .and. &
-   (abs(time-300.0).lt.0.1 .or. abs(time-600.0).lt.0.1 .or. abs(time-1200.0).lt.0.1)) then
-  print*,''
-  print*,'VOLUMETRIC HEATING DEBUG at time=',time,' s'
-  print*,'  temporal_factor=',temporal_factor
-  print*,'  bubctrx=',bubctrx,' m, bubctry=',bubctry,' m'
-  print*,'  bubradx=',bubradx,' m, bubrady=',bubrady,' m'
-  print*,'  atten_length=',atten_length,' m'
+! Initialize random perturbations if needed
+if(iflux_randpert(iforcing) == 1) then
+  allocate(flux_rand_nums(nnxp(ngrid), nnyp(ngrid)))
+
+  ! Generate random numbers (use same approach as bubble random perturbations)
+  if((my_rams_num == mainnum) .or. (nmachs == 1)) then
+    do j = 1, nnyp(ngrid)
+      do i = 1, nnxp(ngrid)
+        call random_number(rand_num)
+        flux_rand_nums(i,j) = 1.0 - (2.0 * rand_num)  ! -1 to 1
+      enddo
+    enddo
+  endif
+
+  ! Broadcast if parallel
+  if(nmachs > 1) then
+    CALL broadcast_bub_rand_nums(nnxp(ngrid) * nnyp(ngrid), flux_rand_nums)
+  endif
 endif
 
 ! Initialize max tracking
@@ -928,62 +975,67 @@ max_j = 0
 max_k = 0
 
 ! Calculate heating at each grid point
-do k=2,mzp  ! Start at k=2 (lowest model level)
-  do j=ja,jz
-    do i=ia,iz
+do k = 2, mzp
+  do j = ja, jz
+    do i = ia, iz
       ! Get grid point center coordinates
       x_pos = (XMN(i+i0,ngrid) + XMN(i+i0+1,ngrid)) * 0.5
       y_pos = (YMN(j+j0,ngrid) + YMN(j+j0+1,ngrid)) * 0.5
       z_pos = (ZMN(k,ngrid) + ZMN(k+1,ngrid)) * 0.5
 
       ! Calculate horizontal distance from center
-      if (bubradx.gt.0.0) then
+      if(bubradx > 0.0) then
         dist_x = (x_pos - bubctrx) / bubradx
       else
         dist_x = 0.0
       endif
 
-      if (bubrady.gt.0.0) then
+      if(bubrady > 0.0) then
         dist_y = (y_pos - bubctry) / bubrady
       else
         dist_y = 0.0
       endif
 
       ! For 2D simulation let Y-dir = X-dir
-      if(jdim==0) dist_y = dist_x
+      if(jdim == 0) dist_y = dist_x
 
       ! Calculate radial distance (normalized by sigma)
       r_horiz = sqrt(dist_x**2 + dist_y**2)
 
-      ! Horizontal Gaussian: exp(-r_normalized²)
+      ! Horizontal Gaussian: exp(-r_normalized**2)
       horiz_gauss = exp(-r_horiz**2)
 
       ! Vertical exponential decay
-      if(atten_length.gt.0.0) then
+      if(atten_length > 0.0) then
         vert_decay = exp(-z_pos / atten_length)
       else
         vert_decay = 0.0
       endif
 
-      ! Combined 3D heating distribution in W/m²
-      heating_wm2 = BTHP * horiz_gauss * vert_decay * temporal_factor
+      ! Base 3D heating distribution in W/m2
+      base_heating = flux_amp_wm2(iforcing) * horiz_gauss * vert_decay * temporal_factor
 
-      ! Convert W/m² to heating rate (K/s)
-      ! Formula: dT/dt = Q / (ρ × Δz × cp)
-      ! where Q is in W/m², ρ is density, Δz is layer thickness, cp is specific heat
+      ! Convert W/m2 to heating rate (K/s)
+      ! Formula: dT/dt = Q / (rho * dz * cp)
 
       ! Get layer thickness at this grid point
       dz_meters = (ZMN(k+1,ngrid) - ZMN(k,ngrid)) / rtgt(i-ia+1,j-ja+1)
 
-      ! Calculate heating rate
-      heating_rate = heating_wm2 / (dn0(k,i-ia+1,j-ja+1) * dz_meters * cp)
+      ! Calculate heating rate from base heating
+      heating_rate = base_heating / (dn0(k,i-ia+1,j-ja+1) * dz_meters * cp)
+
+      ! Add random perturbation if requested
+      if(iflux_randpert(iforcing) == 1) then
+        random_pert = flux_rand_nums(i+i0,j+j0) * flux_randamp(iforcing)
+        heating_rate = heating_rate + random_pert / dtlt  ! Convert K to K/s
+      endif
 
       ! Add to temperature tendency
       tht(k,i-ia+1,j-ja+1) = tht(k,i-ia+1,j-ja+1) + heating_rate
 
-      ! Track maximum values
-      if(abs(heating_wm2).gt.abs(max_heating_wm2)) then
-        max_heating_wm2 = heating_wm2
+      ! Track maximum values (use base_heating for W/m2 tracking)
+      if(abs(base_heating) > abs(max_heating_wm2)) then
+        max_heating_wm2 = base_heating
         max_heating_rate = heating_rate
         max_tendency = tht(k,i-ia+1,j-ja+1)
         max_dz = dz_meters
@@ -998,16 +1050,22 @@ do k=2,mzp  ! Start at k=2 (lowest model level)
 enddo
 
 ! Debug output at specific times
-if(print_msg .and. my_rams_num.eq.1 .and. &
-   (abs(time-1.0).lt.0.1 .or. abs(time-300.0).lt.0.1 .or. &
-    abs(time-600.0).lt.0.1 .or. abs(time-1200.0).lt.0.1)) then
-  print*,'  Max heating_wm2=',max_heating_wm2,' W/m² at i,j,k=',max_i,max_j,max_k
+if(print_msg .and. my_rams_num == 1 .and. &
+   (abs(time-1.0) < 0.1 .or. abs(time-300.0) < 0.1 .or. &
+    abs(time-600.0) < 0.1 .or. abs(time-1200.0) < 0.1)) then
+  print*,''
+  print*,'FLUX FORCING #',iforcing,' DEBUG at time=',time,' s'
+  print*,'  temporal_factor=',temporal_factor
+  print*,'  Max heating_wm2=',max_heating_wm2,' W/m2 at i,j,k=',max_i,max_j,max_k
   print*,'  Max heating_rate=',max_heating_rate,' K/s'
   print*,'  Resulting tendency=',max_tendency,' K/s'
-  print*,'  At that point: dn0=',max_dn0,' kg/m³, dz=',max_dz,' m'
-  print*,'  Check: heating_wm2/(dn0*dz*cp) = ',max_heating_wm2/(max_dn0*max_dz*cp)
   print*,''
 endif
 
+! Clean up random arrays
+if(iflux_randpert(iforcing) == 1) then
+  deallocate(flux_rand_nums)
+endif
+
 return
-END SUBROUTINE volumetric_heating
+END SUBROUTINE apply_single_flux_forcing

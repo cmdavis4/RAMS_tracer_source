@@ -29,7 +29,7 @@ implicit none
   !Saleeby(2016)
   !Increment memory buffer size here if you add RAMSIN Namelist variables.
   !Add to the appropriate section below as (#-of-them * arraysize).
-  nwords = 223 * 1                 & !single values
+  nwords = 224 * 1                 & !single values (added NFLUX_FORCINGS)
          +   1 * 8                 & !micro (8-hydromet types for gnu)
          +   3 * aerocat           & !micro (number aerosol species)
          +  44 * maxgrds           & !grid-dependent (max grids)
@@ -43,6 +43,7 @@ implicit none
          +  17 *       1 * strl1   & !individual input strings
          +   1 *      50 * strl1   & !array of input strings
          +   5 * maxgrds * strl1   & !grid-dependent array of input strings
+         +  13 * max_flux_forcings & !flux forcing arrays
          + 100                       !extras so we have enough buffer
 
   allocate (buff(nwords)) ! note that what got allocated was nwords*sizeof(real) bytes
@@ -252,10 +253,20 @@ implicit none
     CALL par_put_int   (IBDZK2,1)
     CALL par_put_float (BTHP,1)
     CALL par_put_float (BRTP,1)
-    CALL par_put_int   (IFLUXSTART,1)
-    CALL par_put_int   (IFLUXMAX,1)
-    CALL par_put_int   (IFLUXDECAY,1)
-    CALL par_put_int   (IFLUXEND,1)
+    CALL par_put_int   (NFLUX_FORCINGS,1)
+    CALL par_put_int   (IFLUX_GRID,max_flux_forcings)
+    CALL par_put_int   (IFLUX_XIA,max_flux_forcings)
+    CALL par_put_int   (IFLUX_XIZ,max_flux_forcings)
+    CALL par_put_int   (IFLUX_YJA,max_flux_forcings)
+    CALL par_put_int   (IFLUX_YJZ,max_flux_forcings)
+    CALL par_put_int   (IFLUX_K_ATTEN,max_flux_forcings)
+    CALL par_put_float (FLUX_AMP_WM2,max_flux_forcings)
+    CALL par_put_int   (IFLUX_TSTART,max_flux_forcings)
+    CALL par_put_int   (IFLUX_TMAX,max_flux_forcings)
+    CALL par_put_int   (IFLUX_TDECAY,max_flux_forcings)
+    CALL par_put_int   (IFLUX_TEND,max_flux_forcings)
+    CALL par_put_int   (IFLUX_RANDPERT,max_flux_forcings)
+    CALL par_put_float (FLUX_RANDAMP,max_flux_forcings)
     CALL par_put_int   (ICONV,1)
     CALL par_put_int   (ICONGR,1)
     CALL par_put_int   (ICICENT,1)
@@ -590,10 +601,20 @@ implicit none
     CALL par_get_int   (IBDZK2,1)
     CALL par_get_float (BTHP,1)
     CALL par_get_float (BRTP,1)
-    CALL par_get_int   (IFLUXSTART,1)
-    CALL par_get_int   (IFLUXMAX,1)
-    CALL par_get_int   (IFLUXDECAY,1)
-    CALL par_get_int   (IFLUXEND,1)
+    CALL par_get_int   (NFLUX_FORCINGS,1)
+    CALL par_get_int   (IFLUX_GRID,max_flux_forcings)
+    CALL par_get_int   (IFLUX_XIA,max_flux_forcings)
+    CALL par_get_int   (IFLUX_XIZ,max_flux_forcings)
+    CALL par_get_int   (IFLUX_YJA,max_flux_forcings)
+    CALL par_get_int   (IFLUX_YJZ,max_flux_forcings)
+    CALL par_get_int   (IFLUX_K_ATTEN,max_flux_forcings)
+    CALL par_get_float (FLUX_AMP_WM2,max_flux_forcings)
+    CALL par_get_int   (IFLUX_TSTART,max_flux_forcings)
+    CALL par_get_int   (IFLUX_TMAX,max_flux_forcings)
+    CALL par_get_int   (IFLUX_TDECAY,max_flux_forcings)
+    CALL par_get_int   (IFLUX_TEND,max_flux_forcings)
+    CALL par_get_int   (IFLUX_RANDPERT,max_flux_forcings)
+    CALL par_get_float (FLUX_RANDAMP,max_flux_forcings)
     CALL par_get_int   (ICONV,1)
     CALL par_get_int   (ICONGR,1)
     CALL par_get_int   (ICICENT,1)

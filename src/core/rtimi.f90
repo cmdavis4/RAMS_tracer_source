@@ -36,9 +36,9 @@ if(iprntstmt>=1 .and. print_msg) &
 if(ICONV > 0 .and. ICONGR == ngrid) &
   CALL conv_forcing (tend%ut(1),tend%vt(1))
 
-!Volumetric heating forcing
-if(IBUBBLE == 5 .and. IBUBGRD == ngrid) &
-  CALL volumetric_heating (tend%tht(1),basic_g(ngrid)%dn0(1,1,1),grid_g(ngrid)%rtgt(1,1))
+!Flux forcing system (replaces old IBUBBLE=5 volumetric_heating)
+if(NFLUX_FORCINGS > 0) &
+  CALL flux_forcings (tend%tht(1),basic_g(ngrid)%dn0(1,1,1),grid_g(ngrid)%rtgt(1,1))
 
 return
 END SUBROUTINE tend0

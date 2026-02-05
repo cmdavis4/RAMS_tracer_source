@@ -25,7 +25,7 @@ character(len=*) :: group,vr,cc
 real :: ff
 integer :: ii,nv
 integer :: inrflg
-integer, parameter ::nvgrid=37,nvstrt=77,nvindat=151,nvsound=10
+integer, parameter ::nvgrid=37,nvstrt=77,nvindat=161,nvsound=10
 integer ::  igrids(nvgrid),istart(nvstrt),iindat(nvindat),isound(nvsound)
 character(len=16) :: grids(nvgrid),start(nvstrt),indat(nvindat),sound(nvsound)
 data igrids/nvgrid*0/,istart/nvstrt*0/,iindat/nvindat*0/,isound/nvsound*0/
@@ -64,7 +64,11 @@ DATA INDAT/  &
      ,'DTHCON','DRTCON','SLZ','SLMSTR','STGOFF','IDIFFK','IDIFFPERTS'    &
      ,'IHORGRAD','CSX','CSZ','XKHKM','ZKHKM','AKMIN','IBUBBLE','IBUBGRD' &
      ,'IBDXIA','IBDXIZ','IBDYJA','IBDYJZ','IBDZK1','IBDZK2','BTHP'       &
-     ,'BRTP','IFLUXSTART','IFLUXMAX','IFLUXDECAY','IFLUXEND'             &
+     ,'BRTP'                                                             &
+     ,'NFLUX_FORCINGS','IFLUX_GRID','IFLUX_XIA','IFLUX_XIZ'             &
+     ,'IFLUX_YJA','IFLUX_YJZ','IFLUX_K_ATTEN','FLUX_AMP_WM2'            &
+     ,'IFLUX_TSTART','IFLUX_TMAX','IFLUX_TDECAY','IFLUX_TEND'           &
+     ,'IFLUX_RANDPERT','FLUX_RANDAMP'                                    &
      ,'ICONV','ICONGR','ICICENT','ICJCENT','CXRAD','CYRAD'               &
      ,'ICVERT','ICKMAX','CZRAD','ICKCENT','CDIVMAX','CTAU','CTMAX'       &
      ,'IRCE','RCE_SZEN','RCE_SOLC','RCE_UBMN','RCE_BUBL','LEVEL','ISCM'  &
@@ -302,10 +306,20 @@ IF(GROUP.EQ.'$MODEL_OPTIONS') THEN
  IF(VR.EQ.'IBDZK2')       CALL varseti (VR,IBDZK2,NV,1,II,-300,300)
  IF(VR.EQ.'BTHP')         CALL varsetf (VR,BTHP,NV,1,FF,-9999.,9999.)
  IF(VR.EQ.'BRTP')         CALL varsetf (VR,BRTP,NV,1,FF,-9999.,9999.)
- IF(VR.EQ.'IFLUXSTART')   CALL varseti (VR,IFLUXSTART,NV,1,II,0,999999)
- IF(VR.EQ.'IFLUXMAX')     CALL varseti (VR,IFLUXMAX,NV,1,II,0,999999)
- IF(VR.EQ.'IFLUXDECAY')   CALL varseti (VR,IFLUXDECAY,NV,1,II,0,999999)
- IF(VR.EQ.'IFLUXEND')     CALL varseti (VR,IFLUXEND,NV,1,II,0,999999)
+ IF(VR.EQ.'NFLUX_FORCINGS') CALL varseti (VR,NFLUX_FORCINGS,NV,1,II,0,10)
+ IF(VR.EQ.'IFLUX_GRID')     CALL varseti (VR,IFLUX_GRID(NV),NV,max_flux_forcings,II,1,10)
+ IF(VR.EQ.'IFLUX_XIA')      CALL varseti (VR,IFLUX_XIA(NV),NV,max_flux_forcings,II,1,3000)
+ IF(VR.EQ.'IFLUX_XIZ')      CALL varseti (VR,IFLUX_XIZ(NV),NV,max_flux_forcings,II,1,3000)
+ IF(VR.EQ.'IFLUX_YJA')      CALL varseti (VR,IFLUX_YJA(NV),NV,max_flux_forcings,II,1,3000)
+ IF(VR.EQ.'IFLUX_YJZ')      CALL varseti (VR,IFLUX_YJZ(NV),NV,max_flux_forcings,II,1,3000)
+ IF(VR.EQ.'IFLUX_K_ATTEN')  CALL varseti (VR,IFLUX_K_ATTEN(NV),NV,max_flux_forcings,II,1,300)
+ IF(VR.EQ.'FLUX_AMP_WM2')   CALL varsetf (VR,FLUX_AMP_WM2(NV),NV,max_flux_forcings,FF,-9999.,9999.)
+ IF(VR.EQ.'IFLUX_TSTART')   CALL varseti (VR,IFLUX_TSTART(NV),NV,max_flux_forcings,II,0,999999)
+ IF(VR.EQ.'IFLUX_TMAX')     CALL varseti (VR,IFLUX_TMAX(NV),NV,max_flux_forcings,II,0,999999)
+ IF(VR.EQ.'IFLUX_TDECAY')   CALL varseti (VR,IFLUX_TDECAY(NV),NV,max_flux_forcings,II,0,999999)
+ IF(VR.EQ.'IFLUX_TEND')     CALL varseti (VR,IFLUX_TEND(NV),NV,max_flux_forcings,II,0,999999)
+ IF(VR.EQ.'IFLUX_RANDPERT') CALL varseti (VR,IFLUX_RANDPERT(NV),NV,max_flux_forcings,II,0,1)
+ IF(VR.EQ.'FLUX_RANDAMP')   CALL varsetf (VR,FLUX_RANDAMP(NV),NV,max_flux_forcings,FF,0.,10.)
  IF(VR.EQ.'ICONV')        CALL varseti (VR,ICONV,NV,1,II,0,5)
  IF(VR.EQ.'ICONGR')       CALL varseti (VR,ICONGR,NV,1,II,0,10)
  IF(VR.EQ.'ICICENT')      CALL varseti (VR,ICICENT,NV,1,II,1,3000)
@@ -591,10 +605,7 @@ WRITE(6,'(100(3(A15,E11.4)/))')      &
  ,'DRTCON=',DRTCON                   &
  ,'BTHP=',BTHP                       &
  ,'BRTP=',BRTP                       &
- ,'IFLUXSTART=',IFLUXSTART           &
- ,'IFLUXMAX=',IFLUXMAX               &
- ,'IFLUXDECAY=',IFLUXDECAY           &
- ,'IFLUXEND=',IFLUXEND               &
+ ,'NFLUX_FORCINGS=',NFLUX_FORCINGS   &
  ,'CXRAD=',CXRAD                     &
  ,'CYRAD=',CYRAD                     &
  ,'CZRAD=',CZRAD                     &
@@ -640,6 +651,21 @@ WRITE(6,304)(' ',BCTAU(NG),SPONGE_TAU(NG),NG=1,NGRIDS)
 303  FORMAT(A1,'  XKHKM=',E12.5,'          ZKHKM=',E12.5  &
    ,'          AKMIN=',E12.5,999(A1,/,E21.5,2E28.5))
 304  FORMAT(A1,'  BCTAU=',E12.5'     SPONGE_TAU=',E12.5,999(A1,/,E21.5,E28.5))
+
+IF (NFLUX_FORCINGS > 0) THEN
+  PRINT*, ' '
+  WRITE(6,*)'Flux Forcing Parameters:'
+  WRITE(6,901)(' ',IFLUX_GRID(M),IFLUX_XIA(M),IFLUX_XIZ(M),M=1,NFLUX_FORCINGS)
+  WRITE(6,902)(' ',IFLUX_YJA(M),IFLUX_YJZ(M),IFLUX_K_ATTEN(M),M=1,NFLUX_FORCINGS)
+  WRITE(6,903)(' ',FLUX_AMP_WM2(M),IFLUX_RANDPERT(M),FLUX_RANDAMP(M),M=1,NFLUX_FORCINGS)
+  WRITE(6,904)(' ',IFLUX_TSTART(M),IFLUX_TMAX(M),M=1,NFLUX_FORCINGS)
+  WRITE(6,905)(' ',IFLUX_TDECAY(M),IFLUX_TEND(M),M=1,NFLUX_FORCINGS)
+901  FORMAT(A1,'GRID=',I2,' XIA=',I5,' XIZ=',I5,999(A1,/,I6,2I11))
+902  FORMAT(A1,' YJA=',I5,' YJZ=',I5,' K_ATTEN=',I5,999(A1,/,3I11))
+903  FORMAT(A1,'AMP(W/m2)=',F8.1,' RANDPERT=',I2,' RANDAMP=',F6.2,999(A1,/,F18.1,I12,F12.2))
+904  FORMAT(A1,'TSTART=',I6,' TMAX=',I6,999(A1,/,2I12))
+905  FORMAT(A1,'TDECAY=',I6,' TEND=',I6,999(A1,/,2I12))
+ENDIF
 
 PRINT*, ' '
 

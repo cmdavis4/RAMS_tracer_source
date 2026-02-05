@@ -723,26 +723,6 @@ IF(ibubble.lt.0 .or. ibubble.gt.5) then
    IFATERR=IFATERR+1
 ENDIF
 
-IF(ibubble.eq.5) then
-   IF(ifluxstart.lt.0 .or. ifluxmax.lt.0 .or. &
-      ifluxdecay.lt.0 .or. ifluxend.lt.0) then
-      PRINT*,' FATAL - All flux timing parameters must be >= 0'
-      IFATERR=IFATERR+1
-   ENDIF
-   IF(ifluxmax.lt.ifluxstart) then
-      PRINT*,' FATAL - IFLUXMAX must be >= IFLUXSTART'
-      IFATERR=IFATERR+1
-   ENDIF
-   IF(ifluxdecay.lt.ifluxmax) then
-      PRINT*,' FATAL - IFLUXDECAY must be >= IFLUXMAX'
-      IFATERR=IFATERR+1
-   ENDIF
-   IF(ifluxend.lt.ifluxdecay) then
-      PRINT*,' FATAL - IFLUXEND must be >= IFLUXDECAY'
-      IFATERR=IFATERR+1
-   ENDIF
-ENDIF
-
 IF(iconv.lt.0 .or. iconv.gt.5) then
    PRINT*,' FATAL - ICONV must be 0 - 5'
    PRINT*,'         0 = off'

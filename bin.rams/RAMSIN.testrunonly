@@ -434,8 +434,8 @@
    IBUBBLE = 1,              ! Bubble initialization: 0 = off
                              ! 1=square bubble, 2=gaussian bubble
                              ! 3=random perturbations (user adjust ruser.f90)
-                             ! 4=surface flux forcing
-                             ! 5=volumetric heating forcing
+                             ! 4=combined bubble+random perturbations
+                             ! (Note: volumetric heating now uses NFLUX_FORCINGS)
    IBUBGRD = 1,              ! Grid Number On Which To Initialize Bubble
    IBDXIA  = 5,              ! DX start grid point
    IBDXIZ  = 13,             ! DX end grid point
@@ -447,11 +447,41 @@
                              ! For vol. heating: max heating rate (W/m^2)
    BRTP    = 0.2,            ! Mixing ratio perturbation (RTP * (1 + BRTP)
 
-!------Volumetric Heating Forcing (IBUBBLE=5) --------------------------------
-   IFLUXSTART = 0,           ! Time (s) when heating starts ramping up
-   IFLUXMAX   = 600,         ! Time (s) when heating reaches maximum
-   IFLUXDECAY = 1200,        ! Time (s) when heating starts ramping down
-   IFLUXEND   = 1800,        ! Time (s) when heating ends
+!------Multiple Flux Forcing System------------------------------------------
+! Replaces old IBUBBLE=5 volumetric heating with more flexible system
+   NFLUX_FORCINGS = 0,       ! Number of flux forcings (0-10)
+                             ! Set to 0 to disable, or use values 1-10
+
+! Only fill in arrays up to NFLUX_FORCINGS elements
+! Example with 2 forcings:
+!  NFLUX_FORCINGS = 2,
+!  IFLUX_GRID     = 1, 1,           ! Grid for each forcing
+!  IFLUX_XIA      = 5, 50,          ! X start points
+!  IFLUX_XIZ      = 13, 60,         ! X end points
+!  IFLUX_YJA      = 5, 50,          ! Y start points
+!  IFLUX_YJZ      = 13, 60,         ! Y end points
+!  IFLUX_K_ATTEN  = 16, 20,         ! K level for e-folding height
+!  FLUX_AMP_WM2   = 500., 300.,     ! Heating amplitude (W/m2)
+!  IFLUX_TSTART   = 0, 600,         ! Start time (s)
+!  IFLUX_TMAX     = 600, 900,       ! Max time (s) - fully ramped up
+!  IFLUX_TDECAY   = 1200, 1500,     ! Decay start time (s)
+!  IFLUX_TEND     = 1800, 1800,     ! End time (s)
+!  IFLUX_RANDPERT = 0, 1,           ! Random perturbations (0=off, 1=on)
+!  FLUX_RANDAMP   = 0., 0.5,        ! Random pert amplitude (K)
+
+   IFLUX_GRID     = 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+   IFLUX_XIA      = 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+   IFLUX_XIZ      = 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+   IFLUX_YJA      = 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+   IFLUX_YJZ      = 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+   IFLUX_K_ATTEN  = 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+   FLUX_AMP_WM2   = 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+   IFLUX_TSTART   = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   IFLUX_TMAX     = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   IFLUX_TDECAY   = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   IFLUX_TEND     = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   IFLUX_RANDPERT = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+   FLUX_RANDAMP   = 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
 
 !------Convergence Forcing -----------------------------------------------
    ICONV = 0,              ! Convergence Zone initialization: 0 = off

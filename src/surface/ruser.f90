@@ -568,12 +568,22 @@ if(ibubble==2 .or. ibubble==4) then
   print*,'X-center,Y-center:',bubctrx,bubctry
   print*,''
  endif
- bubtemp=int(IBDZK1+IBDZK2)/2.0
- bubctrz=ZMN(bubtemp,1)
  !Set up length, width, and depth of bubble
  bubradx=(IBDXIZ-IBDXIA) * deltax * 0.5
  bubrady=(IBDYJZ-IBDYJA) * deltax * 0.5
- bubradz=(ZMN(IBDZK2,1)-ZMN(IBDZK1,1)) * 0.5
+ !  IF IBDZK2 is <0, interpret IBDZK1 as the center and the distance from IBDZK1
+ !  to -IBDZK2 as the radius; this allows for bubbles that are partially underground
+ !  This might give weird results if you use nonconstant z grid spacing!
+ if (IBDZK2 < 0) then
+  ! The radius is the distance from between -IDBZK2 and IBDZK1
+  bubradz=(ZMN(-IBDZK2,1)-ZMN(IBDZK1,1)) 
+  bubctrz=ZMN(IBDZK1,1)
+    print*,'Negative IBDZK2, interpreting as bubble centered on z=',bubctrz,'m, radius ',bubradz, 'm'
+ else
+   bubradz=(ZMN(IBDZK2,1)-ZMN(IBDZK1,1)) * 0.5
+  bubtemp=int(IBDZK1+IBDZK2)/2.0
+  bubctrz=ZMN(bubtemp,1)
+ endif
  !Set up gaussian bubble
  acetmp8=atan(1.0)*4.0/2.0 ! pi/2
  do j=1,m3
@@ -581,7 +591,7 @@ if(ibubble==2 .or. ibubble==4) then
    do k=1,m1
     acetmp1=(XMN(i+i0,1)+XMN(i+i0+1,1))*0.5
     acetmp2=(YMN(j+j0,1)+YMN(j+j0+1,1))*0.5
-    acetmp3=(ZMN(k,1)+ZMN(k+1,1))*0.5
+    acetmp3=(ZMN(k,1)+ZMN(k+1,1))*0.5  ! Z value we're using for the calculation
     !  Allow for an infinite bubble in x or y if the same value is passed for
     !  IBDXIA and IBDXIZ or IBDYJA and IBDYJZ
     if (bubradx /= 0) then

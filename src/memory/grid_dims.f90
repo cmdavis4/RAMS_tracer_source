@@ -15,7 +15,7 @@ integer, parameter ::  &
  ,maxgrds      = 8     & ! Max # of grids
  ,nxpmax       = 3030  & ! Max # of points in x-direction
  ,nypmax       = 3030  & ! Max # of points in y-direction
- ,nzpmax       = 332   & ! Max # of points in z-direction
+ ,nzpmax       = 1000   & ! Max # of points in z-direction
  ,nzgmax       = 20    & ! Max # of soil levels
  ,nzsmax       = 20    & ! Max # of surface water / snow levels
  ,maxkppz      = 200   & ! Max # of KPP ocean model levels

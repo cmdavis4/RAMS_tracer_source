@@ -819,7 +819,7 @@ Subroutine flux_forcings (tht,dn0,rtgt)
 
 use micphys
 use mem_grid, only: print_msg, time, ngrid
-use node_mod, only: my_rams_num
+use node_mod, only: my_rams_num, mxp, myp, mzp
 
 implicit none
 

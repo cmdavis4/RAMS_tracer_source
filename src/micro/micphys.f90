@@ -125,6 +125,25 @@ real, dimension(nzpmax) :: xdust1cldrt,xdust2cldrt,xdust1drzrt,xdust2drzrt
 integer :: ibubble,ibubgrd,ibdxia,ibdxiz,ibdyja,ibdyjz,ibdzk1,ibdzk2
 real :: bthp,brtp
 
+!******Variables for NEW FLUX FORCING SYSTEM ************************************
+integer, parameter :: max_flux_forcings = 10
+integer :: nflux_forcings  ! Number of flux forcings to apply (0-10)
+
+! Per-forcing parameters (dimensioned by max_flux_forcings)
+integer, dimension(max_flux_forcings) :: iflux_grid      ! Grid number
+integer, dimension(max_flux_forcings) :: iflux_xia       ! X start grid point
+integer, dimension(max_flux_forcings) :: iflux_xiz       ! X end grid point
+integer, dimension(max_flux_forcings) :: iflux_yja       ! Y start grid point
+integer, dimension(max_flux_forcings) :: iflux_yjz       ! Y end grid point
+integer, dimension(max_flux_forcings) :: iflux_k_atten   ! K level for e-folding height
+real, dimension(max_flux_forcings)    :: flux_amp_wm2    ! Heating amplitude (W/m²)
+integer, dimension(max_flux_forcings) :: iflux_tstart    ! Start time (s)
+integer, dimension(max_flux_forcings) :: iflux_tmax      ! Max time (s)
+integer, dimension(max_flux_forcings) :: iflux_tdecay    ! Decay start time (s)
+integer, dimension(max_flux_forcings) :: iflux_tend      ! End time (s)
+integer, dimension(max_flux_forcings) :: iflux_randpert  ! Random perturbations (0=off, 1=on)
+real, dimension(max_flux_forcings)    :: flux_randamp    ! Random pert amplitude (K)
+
 !******Variables Needed for CONVERGENCE FORCING ****************************
 integer :: iconv,icongr,icicent,icjcent,icvert,ickmax,ickcent
 real :: cxrad,cyrad,czrad,cdivmax,ctau,ctmax

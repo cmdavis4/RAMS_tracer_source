@@ -503,7 +503,7 @@ Subroutine bubble (m1,m2,m3,i0,j0,thp,rtp)
 
 use micphys
 use mem_grid
-use mem_radiate, only: irce,rce_bubl
+use mem_radiate, only: irce,rce_bubl,ibubseed
 use node_mod, only: my_rams_num, mainnum, nmachs
 
 implicit none
@@ -519,6 +519,9 @@ real acetmp6,acetmp7,acetmp8,acetmp9
 real bubctrx,bubctry,bubctrz
 real bubradx,bubrady,bubradz
 real, dimension(:,:), allocatable :: bub_rand_nums
+real random_perturbation_max_z
+integer :: nseed_bub, iseed_bub
+integer, allocatable :: seed_arr_bub(:)
 
 if(ibubble==1) then
  if(print_msg) then
@@ -567,12 +570,22 @@ if(ibubble==2 .or. ibubble==4) then
   print*,'X-center,Y-center:',bubctrx,bubctry
   print*,''
  endif
- bubtemp=int(IBDZK1+IBDZK2)/2.0
- bubctrz=ZMN(bubtemp,1)
  !Set up length, width, and depth of bubble
  bubradx=(IBDXIZ-IBDXIA) * deltax * 0.5
  bubrady=(IBDYJZ-IBDYJA) * deltax * 0.5
- bubradz=(ZMN(IBDZK2,1)-ZMN(IBDZK1,1)) * 0.5
+ !  IF IBDZK2 is <0, interpret IBDZK1 as the center and the distance from IBDZK1
+ !  to -IBDZK2 as the radius; this allows for bubbles that are partially underground
+ !  This might give weird results if you use nonconstant z grid spacing!
+ if (IBDZK2 < 0) then
+  ! The radius is the distance from between -IDBZK2 and IBDZK1
+  bubradz=(ZMN(-IBDZK2,1)-ZMN(IBDZK1,1)) 
+  bubctrz=ZMN(IBDZK1,1)
+    print*,'Negative IBDZK2, interpreting as bubble centered on z=',bubctrz,'m, radius ',bubradz, 'm'
+ else
+   bubradz=(ZMN(IBDZK2,1)-ZMN(IBDZK1,1)) * 0.5
+  bubtemp=int(IBDZK1+IBDZK2)/2.0
+  bubctrz=ZMN(bubtemp,1)
+ endif
  !Set up gaussian bubble
  acetmp8=atan(1.0)*4.0/2.0 ! pi/2
  do j=1,m3
@@ -580,7 +593,7 @@ if(ibubble==2 .or. ibubble==4) then
    do k=1,m1
     acetmp1=(XMN(i+i0,1)+XMN(i+i0+1,1))*0.5
     acetmp2=(YMN(j+j0,1)+YMN(j+j0+1,1))*0.5
-    acetmp3=(ZMN(k,1)+ZMN(k+1,1))*0.5
+    acetmp3=(ZMN(k,1)+ZMN(k+1,1))*0.5  ! Z value we're using for the calculation
     !  Allow for an infinite bubble in x or y if the same value is passed for
     !  IBDXIA and IBDXIZ or IBDYJA and IBDYJZ
     if (bubradx /= 0) then
@@ -613,9 +626,13 @@ if(ibubble==2 .or. ibubble==4) then
 endif
 
 if(ibubble==3 .or. ibubble==4) then
+
+  ! Set perturbation depth
+  random_perturbation_max_z = 2000  ! m
+
  if(print_msg) then
   print*,'Activating random temperature perturbation'
-  print*,'at z=2, linearly-decreasing to 0K over 500m'
+  print*,'at z=2, linearly-decreasing to 0K over ',random_perturbation_max_z,'m'
   print*,'On grid number=',IBUBGRD
   if(irce==1)then 
      print*,'With Max amplitude',rce_bubl
@@ -632,9 +649,25 @@ if(ibubble==3 .or. ibubble==4) then
  !
  ! In order to save memory space, do one level at a time.
 
+ ! If the user specified IBUBSEED > 0 in RAMSIN, seed the Fortran intrinsic
+ ! PRNG so different ensemble members can be obtained from the same RAMSIN
+ ! by varying IBUBSEED. Only mainnum (or sequential) draws random numbers,
+ ! so only mainnum needs to be seeded. With IBUBSEED == 0 we leave the PRNG
+ ! in its default state and preserve historical behavior.
+ if (ibubseed > 0 .and. ((my_rams_num .eq. mainnum) .or. (nmachs .eq. 1))) then
+   call random_seed(size=nseed_bub)
+   allocate(seed_arr_bub(nseed_bub))
+   do iseed_bub = 1, nseed_bub
+     seed_arr_bub(iseed_bub) = ibubseed + iseed_bub - 1
+   enddo
+   call random_seed(put=seed_arr_bub)
+   deallocate(seed_arr_bub)
+   if (print_msg) print*,'IBUBSEED=',ibubseed,' (PRNG seeded for bubble perturbation)'
+ endif
+
  do k=2,m1
    ! select levels for temp. pert. based on altitude
-   if( zt(k) <= (500.+zt(2)) ) then ! only over lowest 500 m
+   if( zt(k) <= (random_perturbation_max_z+zt(2)) ) then ! only over layer specified
      ! allocate memory for entire horizontal domain
      allocate(bub_rand_nums(nnxp(ibubgrd), nnyp(ibubgrd)))
 
@@ -660,7 +693,7 @@ if(ibubble==3 .or. ibubble==4) then
          R = bub_rand_nums(i+i0,j+j0)
 
          ! Changed from base rams so that RCE_BUBL controls perturbation amplitude whether or not IRCE is on
-         R = R*rce_bubl*(500.+zt(2)-zt(k))/500.
+         R = R*rce_bubl*(random_perturbation_max_z+zt(2)-zt(k))/random_perturbation_max_z
 
          thp(k,i,j)=thp(k,i,j) + R
          if(k==2) thp(1,i,j)=thp(k,i,j) ! set level 1 to level 2
@@ -668,7 +701,7 @@ if(ibubble==3 .or. ibubble==4) then
      enddo ! j
 
      deallocate(bub_rand_nums)
-   endif ! in lowest 500 m
+   endif ! in layer specified
  enddo ! k
 endif
 
@@ -798,3 +831,300 @@ enddo ! j loop
 
 return
 END SUBROUTINE conv_forcing
+
+!##############################################################################
+Subroutine flux_forcings (tht,dn0,rtgt)
+
+use micphys
+use mem_grid, only: print_msg, time, ngrid
+use node_mod, only: my_rams_num, mxp, myp, mzp
+
+implicit none
+
+real, dimension(mzp,mxp,myp) :: tht,dn0
+real, dimension(mxp,myp) :: rtgt
+
+integer :: n
+
+! Return if not using flux forcings
+if(nflux_forcings <= 0) return
+
+! Print info at initialization (only once per grid)
+if(time <= 0.0 .and. print_msg .and. my_rams_num == 1) then
+  print*,''
+  print*,'INITIALIZING FLUX FORCING SYSTEM'
+  print*,'Number of forcings =', nflux_forcings
+  print*,''
+endif
+
+! Apply each forcing additively
+do n = 1, nflux_forcings
+  ! Only apply if this forcing is on the current grid
+  if(iflux_grid(n) == ngrid) then
+    CALL apply_single_flux_forcing(n, tht, dn0, rtgt)
+  endif
+enddo
+
+return
+END SUBROUTINE flux_forcings
+
+!##############################################################################
+Subroutine apply_single_flux_forcing (iforcing, tht, dn0, rtgt)
+
+use micphys
+use mem_grid, only: deltax, deltaz, jdim, print_msg, time, nnxp, nnyp, zmn, zt, ngrid, dtlt
+use rconstants, only: cp
+use node_mod, only: my_rams_num, mxp, myp, mzp, mi0, mj0, mainnum, nmachs
+
+implicit none
+
+integer, intent(in) :: iforcing  ! Which forcing to apply (1 to nflux_forcings)
+real, dimension(mzp,mxp,myp) :: tht,dn0
+real, dimension(mxp,myp) :: rtgt
+
+integer :: i,j,k,ii,jj
+real :: bubctrx,bubctry,bubradx,bubrady,atten_length
+real :: dist_x,dist_y,r_horiz
+real :: horiz_gauss
+real, dimension(mzp-1) :: vert_decay_factors
+real :: vert_decay_norm
+real :: dtheta_dt,base_heating_wm2, column_heating_wm2
+real :: temporal_factor,dz_meters
+real :: max_heating_wm2,max_heating_rate,max_tendency,max_dz,max_dn0
+integer :: max_i,max_j,max_k
+real :: random_pert, rand_num
+real, dimension(:,:), allocatable :: flux_rand_nums
+logical :: debug
+
+debug = .false.
+
+! Print info at initialization
+if(time <= 0.0 .and. debug .and. my_rams_num == 1) then
+  print*,''
+  print*,'FLUX FORCING #',iforcing
+  print*,'On grid number=',iflux_grid(iforcing)
+  print*,'Flux center from I=',iflux_xia(iforcing),'TO',iflux_xiz(iforcing)
+  print*,'Flux center from J=',iflux_yja(iforcing),'TO',iflux_yjz(iforcing)
+  print*,'Vertical attenuation at K=',iflux_k_atten(iforcing)
+  print*,'Max heating amplitude=',flux_amp_wm2(iforcing),' W/m2'
+  print*,'Flux start time=',iflux_tstart(iforcing),' s'
+  print*,'Flux max time=',iflux_tmax(iforcing),' s'
+  print*,'Flux decay time=',iflux_tdecay(iforcing),' s'
+  print*,'Flux end time=',iflux_tend(iforcing),' s'
+  if(iflux_randpert(iforcing) == 1) then
+    print*,'Random perturbations ON, amplitude=',flux_randamp(iforcing),' K'
+  endif
+  print*,''
+endif
+
+! Calculate temporal evolution factor
+if(time < real(iflux_tstart(iforcing))) then
+  temporal_factor = 0.0
+elseif(time >= real(iflux_tstart(iforcing)) .and. time < real(iflux_tmax(iforcing))) then
+  ! Linear ramp up
+  if(iflux_tmax(iforcing) > iflux_tstart(iforcing)) then
+    temporal_factor = (time - real(iflux_tstart(iforcing))) / &
+                      real(iflux_tmax(iforcing) - iflux_tstart(iforcing))
+  else
+    temporal_factor = 1.0
+  endif
+elseif(time >= real(iflux_tmax(iforcing)) .and. time < real(iflux_tdecay(iforcing))) then
+  ! Constant maximum
+  temporal_factor = 1.0
+elseif(time >= real(iflux_tdecay(iforcing)) .and. time < real(iflux_tend(iforcing))) then
+  ! Linear ramp down
+  if(iflux_tend(iforcing) > iflux_tdecay(iforcing)) then
+    temporal_factor = 1.0 - (time - real(iflux_tdecay(iforcing))) / &
+                            real(iflux_tend(iforcing) - iflux_tdecay(iforcing))
+  else
+    temporal_factor = 0.0
+  endif
+else
+  ! After end time
+  temporal_factor = 0.0
+endif
+
+! Return if temporal factor is zero (no heating)
+if(temporal_factor <= 0.0) return
+
+! Set up center grid points (integer grid indices)
+bubctrx = (iflux_xia(iforcing) + iflux_xiz(iforcing)) / 2.0
+bubctry = (iflux_yja(iforcing) + iflux_yjz(iforcing)) / 2.0
+
+
+! Set up horizontal extent (sigma - radius in meters)
+if((iflux_xiz(iforcing) - iflux_xia(iforcing)) > 0) then
+  bubradx = (iflux_xiz(iforcing) - iflux_xia(iforcing)) * deltax * 0.5
+else
+  bubradx = 0.0  ! Infinite in x-direction
+endif
+
+if((iflux_yjz(iforcing) - iflux_yja(iforcing)) > 0) then
+  bubrady = (iflux_yjz(iforcing) - iflux_yja(iforcing)) * deltax * 0.5
+else
+  bubrady = 0.0  ! Infinite in y-direction
+endif
+
+! Set attenuation length for vertical decay (height at specified k level)
+atten_length = zt(iflux_k_atten(iforcing))
+
+! Initialize random perturbations if needed
+if(iflux_randpert(iforcing) == 1) then
+  allocate(flux_rand_nums(nnxp(ngrid), nnyp(ngrid)))
+
+  ! Generate random numbers (use same approach as bubble random perturbations)
+  if((my_rams_num == mainnum) .or. (nmachs == 1)) then
+    do j = 1, nnyp(ngrid)
+      do i = 1, nnxp(ngrid)
+        call random_number(rand_num)
+        flux_rand_nums(i,j) = 1.0 - (2.0 * rand_num)  ! -1 to 1
+      enddo
+    enddo
+  endif
+
+  ! Broadcast if parallel
+  if(nmachs > 1) then
+    CALL broadcast_bub_rand_nums(nnxp(ngrid) * nnyp(ngrid), flux_rand_nums)
+  endif
+endif
+
+! Initialize max tracking
+max_heating_wm2 = 0.0
+max_heating_rate = 0.0
+max_tendency = 0.0
+max_i = 0
+max_j = 0
+max_k = 0
+
+
+! Need to precalculate the vertical attenuation factor at each model level,
+! since they won't sum to 1 naturally because of the discretization; we need
+! to precompute them calculate a normalization factor
+do k = 2, mzp-1
+  ! The vertical decay factor here comes from the analytical integral (wrt z) of
+  ! the F(y,z) given in Klaasen and Clark 1985 over a single gridbox
+  vert_decay_factors(k) = exp(-zmn(k,ngrid)/atten_length) - exp(-zmn(k+1,ngrid)/atten_length)
+enddo
+! vert_decay_norm = sum(vert_decay_factors)
+! if ( my_rams_num == 1 .and. debug) then
+!   print*,'  vert decay norm=',vert_decay_norm
+! end if
+! vert_decay_factors(:) = vert_decay_factors(:) / vert_decay_norm
+if ( my_rams_num == 1 .and. debug ) then
+  print*,'  vert decay sum=',sum(vert_decay_factors)
+end if
+
+
+! Calculate heating at each grid point
+do j = 1, myp
+  do i = 1, mxp
+    column_heating_wm2 = 0
+
+    ! Get absolute grid points for parallel (& sequential) computation
+    ii = i + mi0(ngrid)
+    jj = j + mj0(ngrid)
+
+    ! Calculate horizontal distance from center (in meters)
+    if(bubradx > 0.0) then
+      dist_x = (float(ii) - bubctrx) * deltax / bubradx
+    else
+      dist_x = 0.0
+    endif
+
+    if(bubrady > 0.0) then
+      dist_y = (float(jj) - bubctry) * deltax / bubrady
+    else
+      dist_y = 0.0
+    endif
+
+    ! For 2D simulation let Y-dir = X-dir
+    if(jdim == 0) dist_y = dist_x
+
+    ! Calculate radial distance (normalized by sigma)
+    r_horiz = sqrt(dist_x**2 + dist_y**2)
+
+    ! Horizontal Gaussian: exp(-r_normalized**2)
+    horiz_gauss = exp(-r_horiz**2)
+
+    do k = 2, mzp
+
+      ! Base 3D heating distribution in W/m2
+      base_heating_wm2 = flux_amp_wm2(iforcing) * horiz_gauss * vert_decay_factors(k) * temporal_factor
+      column_heating_wm2 = column_heating_wm2 + base_heating_wm2
+
+      ! Convert W/m2 to heating rate (K/s)
+      ! Formula: dT/dt = Q / (rho * dz * cp)
+
+      ! Get layer thickness at this grid point
+      dz_meters = (zmn(k+1,ngrid) - zmn(k,ngrid)) / rtgt(i,j)
+
+      ! Calculate heating rate from base heating
+      ! This ensures column-integrated heating matches the specified surface flux
+      dtheta_dt = base_heating_wm2 / (dn0(k,i,j) * dz_meters * cp)
+
+      ! Add random perturbation if requested
+      if(iflux_randpert(iforcing) == 1) then
+        random_pert = flux_rand_nums(ii,jj) * flux_randamp(iforcing)
+        dtheta_dt = dtheta_dt + random_pert / dtlt  ! Convert K to K/s
+      endif
+
+      ! Add to temperature tendency
+      tht(k,i,j) = tht(k,i,j) + dtheta_dt
+
+      ! Print debug information (only on processor 1)
+      if((r_horiz == 0.) .and. debug .and. (k <= 10) .and. (iforcing==1)) then
+        print*,'Applying flux forcing #',iforcing,' at time=',time,' s'
+        print*,'  k=',k
+        print*,'  ii=',ii
+        print*,'  heating amplitude=',flux_amp_wm2(iforcing)
+        print*,'  temporal_factor=',temporal_factor
+        print*,'  bubctrx, bubctry=',bubctrx,bubctry
+        print*,'  bubradx, bubrady=',bubradx,bubrady
+        print*,'  atten_length=',atten_length
+        print*,'  horiz_gauss=',horiz_gauss
+        print*,'  base_heating_wm2=',base_heating_wm2
+        print*,'  dz_meters=',dz_meters
+        print*,'  dtheta_dt=',dtheta_dt
+        print*,'  theta tendency=',tht(k,i,j)
+      endif
+
+      ! Track maximum values (use base_heating for W/m2 tracking)
+      if(abs(base_heating_wm2) > abs(max_heating_wm2)) then
+        max_heating_wm2 = base_heating_wm2
+        max_heating_rate = dtheta_dt
+        max_tendency = tht(k,i,j)
+        max_dz = dz_meters
+        max_dn0 = dn0(k,i,j)
+        max_i = ii
+        max_j = jj
+        max_k = k
+      endif
+
+    enddo
+  if((r_horiz == 0.) .and. debug .and. (iforcing==1)) then
+    print*,'Column total of forcing #',iforcing,' at time=',time,' s'
+    print*,'  column_heating_wm2=',column_heating_wm2
+  endif
+  enddo
+enddo
+
+! Debug output at specific times
+if(print_msg .and. my_rams_num == 1 .and. &
+   (abs(time-1.0) < 0.1 .or. abs(time-300.0) < 0.1 .or. &
+    abs(time-600.0) < 0.1 .or. abs(time-1200.0) < 0.1)) then
+  print*,''
+  print*,'FLUX FORCING #',iforcing,' DEBUG at time=',time,' s'
+  print*,'  temporal_factor=',temporal_factor
+  print*,'  Max heating_wm2=',max_heating_wm2,' W/m2 at i,j,k=',max_i,max_j,max_k
+  print*,'  Max heating_rate=',max_heating_rate,' K/s'
+  print*,'  Resulting tendency=',max_tendency,' K/s'
+  print*,''
+endif
+
+! Clean up random arrays
+if(iflux_randpert(iforcing) == 1) then
+  deallocate(flux_rand_nums)
+endif
+
+return
+END SUBROUTINE apply_single_flux_forcing

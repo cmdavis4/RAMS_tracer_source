@@ -19,6 +19,12 @@ implicit none
    
    integer :: lonrad,ilwrtyp,iswrtyp,irce
    real    :: radfrq,rce_ubmn,rce_bubl,rce_solc,rce_szen
+   ! IBUBSEED: seed for the random temperature bubble in subroutine bubble.
+   ! 0 (default) = leave the Fortran runtime PRNG in its default state, which
+   ! reproduces historical behavior (with ifort, this is bit-reproducible across
+   ! runs). Any positive value calls random_seed(put=...) so ensemble members
+   ! can sweep distinct realizations of the perturbation field.
+   integer :: ibubseed = 0
   
 Contains
 

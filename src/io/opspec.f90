@@ -712,12 +712,14 @@ IF( ((icloud .GE. 2 .AND. icloud .LE. 4 .AND. cparm .LE. 0.)  &
    IFATERR=IFATERR+1
 ENDIF
 
-IF(ibubble.lt.0 .or. ibubble.gt.4) then
-   PRINT*,' FATAL - IBUBBLE must be 0, 1, 2, or 3'
+IF(ibubble.lt.0 .or. ibubble.gt.5) then
+   PRINT*,' FATAL - IBUBBLE must be 0, 1, 2, 3, 4, or 5'
    PRINT*,'         0 = off'
    PRINT*,'         1 = RAMSIN-set square bubble'
    PRINT*,'         2 = RAMSIN-set gaussian bubble'
    PRINT*,'         3 = Random bubble in ruser'
+   PRINT*,'         4 = Combination of 2 and 3'
+   PRINT*,'         5 = Volumetric heating forcing'
    IFATERR=IFATERR+1
 ENDIF
 

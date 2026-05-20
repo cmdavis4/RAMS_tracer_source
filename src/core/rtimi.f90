@@ -6,6 +6,7 @@ use mem_tend
 use var_tables
 use node_mod
 use micphys
+use mem_basic
 
 implicit none
 
@@ -34,6 +35,10 @@ if(iprntstmt>=1 .and. print_msg) &
   print*,'Ngrid, Time, Domain Max W: ',ngrid,time,vertvel_max(ngrid)
 if(ICONV > 0 .and. ICONGR == ngrid) &
   CALL conv_forcing (tend%ut(1),tend%vt(1))
+
+!Flux forcing system (replaces old IBUBBLE=5 volumetric_heating)
+if(NFLUX_FORCINGS > 0) &
+  CALL flux_forcings (tend%tht(1),basic_g(ngrid)%dn0(1,1,1),grid_g(ngrid)%rtgt(1,1))
 
 return
 END SUBROUTINE tend0

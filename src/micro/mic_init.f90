@@ -249,6 +249,7 @@ Subroutine init_ccn1 (n1,n2,n3,cn1np,cn1mp,dn0,ifm)
 use micphys
 use rconstants
 use mem_grid
+use mem_flexparams, only: flexparams
 
 implicit none
 
@@ -256,20 +257,41 @@ integer :: n1,n2,n3,i,j,k,ifm
 real, dimension(n1,n2,n3) :: cn1np,cn1mp,dn0
 real :: ccn1_maxt
 
+! CCN-1 vertical profile parameters, sourced from RAMSIN FLEXPARAMS:
+!   flexparams(1) = ccn1_release_start_z  (m)   constant value below this height
+!   flexparams(2) = ccn1_release_end_z    (m)   linear ramp ends at this height
+!   flexparams(3) = ccn1_release_value    (#/mg) held value above release_end_z
+real :: ccn1_release_start_z, ccn1_release_end_z, ccn1_release_value
+
+ccn1_release_start_z = flexparams(1)
+ccn1_release_end_z   = flexparams(2)
+ccn1_release_value   = flexparams(3) * 1.e6
+
 ! Initialize CCN mode 1
 if(iaeroprnt==1 .and. print_msg) print*,'Start Initializing CCN mode 1 concen'
 
 !Convert RAMSIN #/mg to #/kg
- ccn1_maxt = ccn1_max * 1.e6 
+ccn1_maxt = ccn1_max * 1.e6
 
 do j = 1,n3
  do i = 1,n2
   do k = 1,n1
 
-   !Set up Vertical profile
-   if(k<=2) cn1np(k,i,j)=ccn1_maxt
-   !Exponential decrease that scales with pressure decrease
-   if(k>2)  cn1np(k,i,j)=ccn1_maxt*exp(-zt(k)/7000.)
+   ! Set up vertical profile
+   ! Constant value up to ccn1_release_start_z
+   if(zt(k) <= ccn1_release_start_z) then
+      cn1np(k, i, j) = ccn1_maxt
+   ! Linear decrease to ccn1_release_value from
+   ! ccn1_release_start_z to ccn1_release_end_z
+   elseif(zt(k) <= ccn1_release_end_z) then
+      cn1np(k, i, j) = ccn1_maxt - ((ccn1_maxt - ccn1_release_value) * &
+         (zt(k) - ccn1_release_start_z) / &
+         (ccn1_release_end_z - ccn1_release_start_z) &
+      )
+   ! Hold at ccn1_release_value above ccn1_release_end_z
+   else
+      cn1np(k, i, j) = ccn1_release_value
+   endif
 
    !Output initial sample profile
    if(iaeroprnt==1 .and. i==1 .and. j==1 .and. print_msg) then
@@ -560,39 +582,30 @@ use rconstants
 use mem_grid
 use mem_tracer
 use node_mod
+use mem_flexparams, only: flexparams
 
 implicit none
 
 integer :: n1,n2,n3,i,j,k,ifm,nsc,ii,jj
 real, dimension(n1,n2,n3) :: tracerp,dn0
-real :: ccn1_maxt
+! Vertical gridpoints per tracer species, sourced from RAMSIN FLEXPARAMS:
+!   flexparams(4) = n_z_points_per_tracer
+integer :: n_z_points_per_tracer
+real :: tracer_init_value
+
+n_z_points_per_tracer = nint(flexparams(4))
+tracer_init_value = 100000.
 
 ! Initialize Tracers
 if(print_msg) print*,'Start Initializing Tracers, Grid:',ifm,' Tracer:',nsc
 
-!Convert RAMSIN #/mg to #/kg
- ccn1_maxt = ccn1_max * 1.e6 
-
 do j = 1,n3
  do i = 1,n2
-  do k = 1,n1
+   ! Get the vertical levels for this tracer
+   do k = 2 + (nsc-1)*n_z_points_per_tracer,min(1 + nsc*n_z_points_per_tracer, mzp-1)
+      tracerp(k,i,j)=tracer_init_value
+   enddo
 
-   !Get absolute grid points for parallel (& sequential) computation
-   ii = i+mi0(ngrid)
-   jj = j+mj0(ngrid)
-
-   !Set up Vertical profile, Exponential decrease that scales with pressure
-   if(nsc==1) then
-    if(k<=2) tracerp(k,i,j)=ccn1_maxt
-    if(k>2)  tracerp(k,i,j)=ccn1_maxt*exp(-zt(k)/7000.)
-   endif
-   !Set up Field of CCN mass mixing ratio (kg/kg)
-   if(nsc==2) then
-    tracerp(k,i,j) = ((aero_medrad(1)*aero_rg2rm(1))**3.) &
-                *tracer_g(1,ifm)%tracerp(k,i,j)/(0.23873/aero_rhosol(1))
-   endif
-
-  enddo
  enddo
 enddo
 

@@ -25,7 +25,7 @@ character(len=*) :: group,vr,cc
 real :: ff
 integer :: ii,nv
 integer :: inrflg
-integer, parameter ::nvgrid=37,nvstrt=77,nvindat=147,nvsound=10
+integer, parameter ::nvgrid=37,nvstrt=77,nvindat=148,nvsound=10
 integer ::  igrids(nvgrid),istart(nvstrt),iindat(nvindat),isound(nvsound)
 character(len=16) :: grids(nvgrid),start(nvstrt),indat(nvindat),sound(nvsound)
 data igrids/nvgrid*0/,istart/nvstrt*0/,iindat/nvindat*0/,isound/nvsound*0/
@@ -77,7 +77,7 @@ DATA INDAT/  &
      ,'SALTS_MAX','IAEROLBC','ICO2LBC','BCTAU','IAERO_CHEM'              &
      ,'AERO_EPSILON','AERO_MEDRAD','ITRKEPSILON','ITRKDUST'              &
      ,'ITRKDUSTIFN','SCMTIME','ISCMX','ISCMY','FRACSAT','IABCARB'        &
-     ,'ABC1_MAX','ABC2_MAX'/
+     ,'ABC1_MAX','ABC2_MAX','FLEXPARAMS'/
 DATA SOUND/  &
       'IPSFLG','ITSFLG','IRTSFLG','IUSFLG','HS','PS','TS','RTS','US','VS'/
 
@@ -382,6 +382,7 @@ IF(GROUP.EQ.'$MODEL_OPTIONS') THEN
  IF(VR.EQ.'ITRKEPSILON')  CALL varseti (VR,ITRKEPSILON,NV,1,II,0,1)
  IF(VR.EQ.'ITRKDUST')     CALL varseti (VR,ITRKDUST,NV,1,II,0,1)
  IF(VR.EQ.'ITRKDUSTIFN')  CALL varseti (VR,ITRKDUSTIFN,NV,1,II,0,1)
+ IF(VR.EQ.'FLEXPARAMS')   CALL varsetf (VR,FLEXPARAMS(NV),NV,nflexparams,FF,-1.E30,1.E30)
 ENDIF
 
 IF(GROUP.EQ.'$MODEL_SOUND') THEN

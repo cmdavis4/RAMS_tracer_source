@@ -57,6 +57,7 @@ OBJ = $(ARC)($(MODEL)/lib/an_header.o) \
       $(ARC)($(MODEL)/memory/mem_mksfc.o) \
       $(ARC)($(MODEL)/memory/mem_oda.o) \
       $(ARC)($(MODEL)/memory/mem_kpp.o) \
+      $(ARC)($(MODEL)/memory/mem_flexparams.o) \
       $(ARC)($(MODEL)/memory/mem_all.o) \
       $(ARC)($(MODEL)/micro_bin/module_hujisbm.o) \
       $(ARC)($(MODEL)/memory/vtab_fill.o) \

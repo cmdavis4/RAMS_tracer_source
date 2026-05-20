@@ -16,6 +16,7 @@ use mem_varinit
 use mem_nestb
 use mem_oda
 use mem_kpp
+use mem_flexparams
 
 use var_tables
 use io_params

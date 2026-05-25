@@ -68,7 +68,7 @@ implicit none
       allocate (basic%th00(n1,n2,n3))
       allocate (basic%rvt00(n1,n2,n3))
 
-      if(imbudget>=1) then
+      if(imbudget>=1 .or. iuvwtend>=1) then
         allocate (basic%wp_buoy_theta(n1,n2,n3))
         allocate (basic%wp_buoy_cond(n1,n2,n3))
         allocate (basic%wp_advdif(n1,n2,n3))

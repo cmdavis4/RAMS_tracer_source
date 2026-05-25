@@ -883,7 +883,7 @@ real, dimension(mzp,mxp,myp) :: tht,dn0
 real, dimension(mxp,myp) :: rtgt
 
 integer :: i,j,k,ii,jj
-real :: bubctrx,bubctry,bubradx,bubrady,atten_length
+real :: bubctrx,bubctry,bubradx,bubrady,atten_length,bubradz,pi_half,vert_norm,z_eval,dist_z,shape_factor
 real :: dist_x,dist_y,r_horiz
 real :: horiz_gauss
 real, dimension(mzp-1) :: vert_decay_factors
@@ -944,6 +944,25 @@ else
   temporal_factor = 0.0
 endif
 
+! Set attenuation length for vertical decay (height at specified k level)
+atten_length = zt(iflux_k_atten(iforcing))
+
+! Print approximate maximum heating rate at initialization (k=2, horizontal
+! forcing center, temporal_factor=1.0). Uses dn0 at (k=2,1,1) on mainnum as
+! the air density estimate, which is fine for an approximate value since
+! dn0 varies weakly at the lowest level.
+if(time <= 0.0 .and. print_msg .and. my_rams_num == 1) then
+  dz_meters = zmn(3,ngrid) - zmn(2,ngrid)
+  base_heating_wm2 = flux_amp_wm2(iforcing) * (1.0 - exp(-dz_meters/atten_length))
+  dtheta_dt = base_heating_wm2 / (dn0(2,1,1) * dz_meters * cp)
+  print*,''
+  print*,'FLUX FORCING #',iforcing,' approx max heating rate ~', &
+         dtheta_dt*3600.0,' K/hr'
+  print*,'  (k=2, horiz center of forcing, temporal_factor=1.0,', &
+         ' flux_amp_wm2=',flux_amp_wm2(iforcing),'W/m2)'
+  print*,''
+endif
+
 ! Return if temporal factor is zero (no heating)
 if(temporal_factor <= 0.0) return
 
@@ -964,9 +983,6 @@ if((iflux_yjz(iforcing) - iflux_yja(iforcing)) > 0) then
 else
   bubrady = 0.0  ! Infinite in y-direction
 endif
-
-! Set attenuation length for vertical decay (height at specified k level)
-atten_length = zt(iflux_k_atten(iforcing))
 
 ! Initialize random perturbations if needed
 if(iflux_randpert(iforcing) == 1) then
@@ -997,19 +1013,19 @@ max_j = 0
 max_k = 0
 
 
-! Need to precalculate the vertical attenuation factor at each model level,
-! since they won't sum to 1 naturally because of the discretization; we need
-! to precompute them calculate a normalization factor
+! Precalculate the vertical attenuation factor at each model level. The decay
+! factor comes from the analytical integral (wrt z) of the F(y,z) given in
+! Klaasen and Clark 1985 over a single gridbox. We shift by zmn(2) so the
+! exponential starts at the bottom of the lowest atmospheric layer rather than
+! at z=0; in RAMS the fictitious level zmn(1)=-dz/2 sits below ground and
+! without the shift the fraction (1 - exp(-zmn(2)/L)) of the column flux falls
+! into that below-ground layer and the column integral underestimates
+! flux_amp_wm2.
 do k = 2, mzp-1
-  ! The vertical decay factor here comes from the analytical integral (wrt z) of
-  ! the F(y,z) given in Klaasen and Clark 1985 over a single gridbox
-  vert_decay_factors(k) = exp(-zmn(k,ngrid)/atten_length) - exp(-zmn(k+1,ngrid)/atten_length)
+  vert_decay_factors(k) = exp(-(zmn(k,ngrid)-zmn(2,ngrid))/atten_length) &
+                        - exp(-(zmn(k+1,ngrid)-zmn(2,ngrid))/atten_length)
 enddo
-! vert_decay_norm = sum(vert_decay_factors)
-! if ( my_rams_num == 1 .and. debug) then
-!   print*,'  vert decay norm=',vert_decay_norm
-! end if
-! vert_decay_factors(:) = vert_decay_factors(:) / vert_decay_norm
+
 if ( my_rams_num == 1 .and. debug ) then
   print*,'  vert decay sum=',sum(vert_decay_factors)
 end if
@@ -1046,7 +1062,10 @@ do j = 1, myp
     ! Horizontal Gaussian: exp(-r_normalized**2)
     horiz_gauss = exp(-r_horiz**2)
 
-    do k = 2, mzp
+    ! Loop runs to mzp-1 to match the bounds of vert_decay_factors (whose
+    ! precomputation only fills k = 2..mzp-1). The omitted top layer is deep
+    ! in the exponential tail and contributes negligibly to the column flux.
+    do k = 2, mzp-1
 
       ! Base 3D heating distribution in W/m2
       base_heating_wm2 = flux_amp_wm2(iforcing) * horiz_gauss * vert_decay_factors(k) * temporal_factor

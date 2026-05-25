@@ -45,6 +45,8 @@ Subroutine acoust (m1,m2,m3  &
 !-----------------------------------------------------------------------
 use mem_grid
 use node_mod
+use mem_basic, only: basic_g
+use io_params, only: iuvwtend
 
 implicit none
 
@@ -81,6 +83,14 @@ allocate(amog(m1,m2,m3))
 !   prdctp1() sets heatfx1
 !   prdctw2() reads heatfx1
 allocate(heatfx1(m2,m3))
+
+! Zero U/V PGF accumulators before the acoustic loop; prdctu/prdctv add
+! their per-sub-step dpdx into these arrays. After the loop we divide by
+! nnacoust to get an average rate [m/s^2] over the acoustic phase.
+if(iuvwtend>=1) then
+   basic_g(ngrid)%up_pgforce = 0.
+   basic_g(ngrid)%vp_pgforce = 0.
+endif
 
 do iter=1,nnacoust(ngrid)
 
@@ -129,6 +139,12 @@ if (ngrid .eq. 1) CALL update_cyclic (LBC_PP)
 
 enddo
 
+! Average accumulated U/V PGF over the acoustic sub-steps to get a rate.
+if(iuvwtend>=1) then
+   basic_g(ngrid)%up_pgforce = basic_g(ngrid)%up_pgforce / real(nnacoust(ngrid))
+   basic_g(ngrid)%vp_pgforce = basic_g(ngrid)%vp_pgforce / real(nnacoust(ngrid))
+endif
+
 deallocate(acoc)
 deallocate(acof)
 deallocate(acog)
@@ -149,6 +165,8 @@ Subroutine prdctu (m1,m2,m3,ia,iz,ja,jz  &
 
 use mem_grid
 use node_mod, only:nmachs
+use mem_basic
+use io_params, only: iuvwtend
 
 implicit none
 
@@ -205,6 +223,14 @@ enddo
 if (nstbot .eq. 1 .and. itopo .eq. 1)  &
      CALL botset (m1,m2,m3,up,'U')
 
+! Accumulate dpdx into basic_g across acoustic sub-steps. acoust() zeros
+! up_pgforce before the loop and divides by nnacoust after, so the final
+! stored value is the average PGF rate over the acoustic phase.
+if(iuvwtend>=1) then
+  basic_g(ngrid)%up_pgforce(1:m1,1:m2,1:m3) =  &
+    basic_g(ngrid)%up_pgforce(1:m1,1:m2,1:m3) + dpdx(1:m1,1:m2,1:m3)
+endif
+
 deallocate(dpdx)
 deallocate(dpdx_top)
 
@@ -217,9 +243,11 @@ END SUBROUTINE prdctu
 !##############################################################################
 Subroutine prdctv (m1,m2,m3,ia,iz,ja,jz  &
    ,vp,vt,pp,th0,f23v,rtgv,rtgt,dyv,topv)
-   
+
 use mem_grid
 use node_mod, only:nmachs
+use mem_basic
+use io_params, only: iuvwtend
 
 implicit none
 
@@ -278,6 +306,14 @@ if (jdim .eq. 1) then
 
    if (nstbot .eq. 1 .and. itopo .eq. 1)  &
         CALL botset (m1,m2,m3,vp,'V')
+
+   ! Accumulate dpdy into basic_g across acoustic sub-steps. acoust() zeros
+   ! vp_pgforce before the loop and divides by nnacoust after, so the final
+   ! stored value is the average PGF rate over the acoustic phase.
+   if(iuvwtend>=1) then
+     basic_g(ngrid)%vp_pgforce(1:m1,1:m2,1:m3) =  &
+       basic_g(ngrid)%vp_pgforce(1:m1,1:m2,1:m3) + dpdy(1:m1,1:m2,1:m3)
+   endif
 
    deallocate(dpdy)
    deallocate(dpdy_top)
@@ -660,7 +696,7 @@ use mem_tend
 use mem_basic
 use mem_grid
 use node_mod
-use micphys
+use io_params, only: iuvwtend
 
 implicit none
 
@@ -676,6 +712,7 @@ Subroutine boyanc (m1,m2,m3,ia,iz,ja,jz,wt,theta,rtc,rv,th0,dtlt)
 
 use rconstants
 use micphys
+use io_params, only: iuvwtend
 use mem_basic
 use mem_grid, only:ngrid
 
@@ -688,7 +725,7 @@ real :: dtlt
 
 allocate(vtemp(m1,m2,m3))
 
-if(imbudget>=1) then
+if(imbudget>=1 .or. iuvwtend>=1) then
  allocate(wpbuoytheta(m1,m2,m3))
  allocate(wpbuoycond(m1,m2,m3))
  allocate(wpadvdif(m1,m2,m3))
@@ -704,7 +741,7 @@ if (level .ge. 1) then
             vtemp(k,i,j) = gg * ((theta(k,i,j) * (1. + .61 * rv(k,i,j))  &
                - th0(k,i,j)) / th0(k,i,j) - (rtc(k,i,j) - rv(k,i,j)) )
             !calculate partial W buoyancy budgets
-            if(imbudget>=1) then
+            if(imbudget>=1 .or. iuvwtend>=1) then
               wpbuoytheta(k,i,j) = gg * ((theta(k,i,j)*(1.+.61*rv(k,i,j)) &
                 - th0(k,i,j)) / th0(k,i,j))
               wpbuoycond(k,i,j)  = gg * (-1.0*(rtc(k,i,j) - rv(k,i,j)))
@@ -718,7 +755,7 @@ else
          do k = 2,m1-1
             vtemp(k,i,j) = gg * (theta(k,i,j) / th0(k,i,j) - 1.)
             !calculate partial W buoyancy budgets
-            if(imbudget>=1) wpbuoytheta(k,i,j) = vtemp(k,i,j)
+            if(imbudget>=1 .or. iuvwtend>=1) wpbuoytheta(k,i,j) = vtemp(k,i,j)
          enddo
       enddo
    enddo
@@ -730,7 +767,7 @@ do j = ja,jz
          !Calculate W buoyancy budgets (m/s)
          !Calculate W due to advection and diffusion (current wt)
          !Multiply by 2*dt for leapfrog timestep t-dt to t+dt
-         if(imbudget>=1) then         
+         if(imbudget>=1 .or. iuvwtend>=1) then
            wpadvdif(k,i,j)    = 2.0 * dtlt * wt(k,i,j)
            wpbuoytheta(k,i,j) = 2.0 * dtlt * (wpbuoytheta(k,i,j) &
                                             + wpbuoytheta(k+1,i,j))
@@ -745,7 +782,7 @@ enddo
 deallocate(vtemp)
 
 !Copy local W buoyancy budgets (m/s) to global budget variables
-if(imbudget>=1) then
+if(imbudget>=1 .or. iuvwtend>=1) then
  basic_g(ngrid)%wp_buoy_theta = wpbuoytheta
  basic_g(ngrid)%wp_buoy_cond  = wpbuoycond
  basic_g(ngrid)%wp_advdif     = wpadvdif
@@ -756,3 +793,74 @@ endif
 
 return
 END SUBROUTINE boyanc
+
+!##############################################################################
+Subroutine save_wp_before_acoustic ()
+
+use mem_tend
+use mem_basic
+use mem_grid, only:ngrid
+use io_params, only: iuvwtend
+
+implicit none
+
+! Save wp before acoustic solver for PGF calculation
+!
+! Note: We temporarily store wp_before in the wp_pgforce array to avoid
+! allocating a separate scratch array. This will be overwritten with the
+! final PGF result in compute_wp_pgforce().
+if(iuvwtend>=1) then
+  basic_g(ngrid)%wp_pgforce = basic_g(ngrid)%wp  ! Temporarily store wp_before
+endif
+
+return
+END SUBROUTINE save_wp_before_acoustic
+
+!##############################################################################
+Subroutine compute_wp_pgforce ()
+
+use mem_basic
+use mem_grid, only:ngrid,nnzp,nnxp,nnyp,dtlt
+use io_params, only: iuvwtend
+
+implicit none
+
+integer :: m1,m2,m3
+
+m1 = nnzp(ngrid)
+m2 = nnxp(ngrid)
+m3 = nnyp(ngrid)
+
+! Compute WP_PGFORCE from change in wp during acoustic solver.
+!
+! The acoustic loop applies, for each of nnacoust sub-steps:
+!     wp = wp + dts*wt + (vertical PGF terms)
+! with dts = 2*dtlt/nnacoust and wt held constant across sub-steps. So the
+! total contribution to Delta_wp from the explicit tendencies is 2*dtlt*wt,
+! where wt at this point = wp_advection + wp_diffusion (rates) plus the
+! buoyancy contribution staggered to w-levels.
+!
+! wp_buoy_theta and wp_buoy_cond are already pre-scaled by 2*dtlt and
+! staggered (k+k+1) inside boyanc, so they are already a Delta_w [m/s].
+! wp_advection and wp_diffusion are stored as raw rates [m/s^2], so they
+! must be multiplied by 2*dtlt here to convert to a Delta_w.
+!
+! Resulting wp_pgforce is Delta_w [m/s] from the vertical PGF over the
+! full big timestep, comparable in units to wp_buoy_theta / wp_buoy_cond.
+!
+! Boundary cells (k=1 and k=nz) are not physically meaningful: the acoustic
+! solver overwrites wp there with boundary conditions each sub-step.
+!
+! Note: wp_pgforce appears on both sides below. On the RHS it holds wp_before
+! (stored by save_wp_before_acoustic); on the LHS it receives the final PGF.
+if(iuvwtend>=1) then
+  basic_g(ngrid)%wp_pgforce(1:m1,1:m2,1:m3) =  &
+    (basic_g(ngrid)%wp(1:m1,1:m2,1:m3) - basic_g(ngrid)%wp_pgforce(1:m1,1:m2,1:m3))  &
+    - 2.0*dtlt * basic_g(ngrid)%wp_advection(1:m1,1:m2,1:m3)  &
+    - 2.0*dtlt * basic_g(ngrid)%wp_diffusion(1:m1,1:m2,1:m3)  &
+    - basic_g(ngrid)%wp_buoy_theta(1:m1,1:m2,1:m3)  &
+    - basic_g(ngrid)%wp_buoy_cond(1:m1,1:m2,1:m3)
+endif
+
+return
+END SUBROUTINE compute_wp_pgforce

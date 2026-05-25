@@ -11,6 +11,7 @@ use mem_oda,   only:if_oda
 use micphys,   only:level,icheckmic,iscm,scmtime,iscmx,iscmy
 use mem_grid
 use kpp_parameters, only:IKPP
+use io_params, only:iuvwtend
 
 implicit none
 
@@ -256,10 +257,20 @@ real, dimension(mzp,mxp,myp) :: thvlast
  CALL acctimes ('BUOYANCY')
 
 !------------------------------------------------------------------------------
+!  Save wp before acoustic solver (for WP_PGFORCE calculation)
+!------------------------------------------------------------------------------
+ if(iuvwtend>=1) CALL save_wp_before_acoustic ()
+
+!------------------------------------------------------------------------------
 !  Acoustic small timesteps
 !------------------------------------------------------------------------------
  CALL acoustic ()
  CALL acctimes ('ACOUSTIC')
+
+!------------------------------------------------------------------------------
+!  Compute WP_PGFORCE from change in wp during acoustic solver
+!------------------------------------------------------------------------------
+ if(iuvwtend>=1) CALL compute_wp_pgforce ()
 
 !------------------------------------------------------------------------------
 !  Last stage of Asselin filter

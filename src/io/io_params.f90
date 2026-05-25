@@ -11,6 +11,7 @@ character(len=strl1) :: hfilin,afilepref
 integer :: ipast_sfc
 !-------------------------------------------------------------------------------
 integer :: ioutput,iclobber,nlite_vars
+integer :: iuvwtend = 0
 real    :: frqstate(maxgrds),avgtim,frqlite,frqmean,frqboth,frqst_keep  
 !-------------------------------------------------------------------------------
 integer, dimension(maxgrds) :: itoptflg,isstflg,ivegtflg,isoilflg  &

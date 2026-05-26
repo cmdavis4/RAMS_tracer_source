@@ -944,8 +944,14 @@ else
   temporal_factor = 0.0
 endif
 
-! Set attenuation length for vertical decay (height at specified k level)
-atten_length = zt(iflux_k_atten(iforcing))
+! Set attenuation length for vertical decay (height at specified k level).
+! Sentinel iflux_k_atten == 0 means "surface sensible heat flux": deposit
+! the entire column flux into the lowest real layer (k=2).
+if(iflux_k_atten(iforcing) == 0) then
+  atten_length = 0.0
+else
+  atten_length = zt(iflux_k_atten(iforcing))
+endif
 
 ! Print approximate maximum heating rate at initialization (k=2, horizontal
 ! forcing center, temporal_factor=1.0). Uses dn0 at (k=2,1,1) on mainnum as
@@ -953,7 +959,11 @@ atten_length = zt(iflux_k_atten(iforcing))
 ! dn0 varies weakly at the lowest level.
 if(time <= 0.0 .and. print_msg .and. my_rams_num == 1) then
   dz_meters = zmn(3,ngrid) - zmn(2,ngrid)
-  base_heating_wm2 = flux_amp_wm2(iforcing) * (1.0 - exp(-dz_meters/atten_length))
+  if(iflux_k_atten(iforcing) == 0) then
+    base_heating_wm2 = flux_amp_wm2(iforcing)
+  else
+    base_heating_wm2 = flux_amp_wm2(iforcing) * (1.0 - exp(-dz_meters/atten_length))
+  endif
   dtheta_dt = base_heating_wm2 / (dn0(2,1,1) * dz_meters * cp)
   print*,''
   print*,'FLUX FORCING #',iforcing,' approx max heating rate ~', &
@@ -1021,10 +1031,16 @@ max_k = 0
 ! without the shift the fraction (1 - exp(-zmn(2)/L)) of the column flux falls
 ! into that below-ground layer and the column integral underestimates
 ! flux_amp_wm2.
-do k = 2, mzp-1
-  vert_decay_factors(k) = exp(-(zmn(k,ngrid)-zmn(2,ngrid))/atten_length) &
-                        - exp(-(zmn(k+1,ngrid)-zmn(2,ngrid))/atten_length)
-enddo
+if(iflux_k_atten(iforcing) == 0) then
+  ! Surface-flux mode: put the whole column flux into the lowest real layer
+  vert_decay_factors(:) = 0.0
+  vert_decay_factors(2) = 1.0
+else
+  do k = 2, mzp-1
+    vert_decay_factors(k) = exp(-(zmn(k,ngrid)-zmn(2,ngrid))/atten_length) &
+                          - exp(-(zmn(k+1,ngrid)-zmn(2,ngrid))/atten_length)
+  enddo
+endif
 
 if ( my_rams_num == 1 .and. debug ) then
   print*,'  vert decay sum=',sum(vert_decay_factors)

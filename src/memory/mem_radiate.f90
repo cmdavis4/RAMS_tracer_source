@@ -19,12 +19,14 @@ implicit none
    
    integer :: lonrad,ilwrtyp,iswrtyp,irce
    real    :: radfrq,rce_ubmn,rce_bubl,rce_solc,rce_szen
-   ! IBUBSEED: seed for the random temperature bubble in subroutine bubble.
-   ! 0 (default) = leave the Fortran runtime PRNG in its default state, which
-   ! reproduces historical behavior (with ifort, this is bit-reproducible across
-   ! runs). Any positive value calls random_seed(put=...) so ensemble members
-   ! can sweep distinct realizations of the perturbation field.
-   integer :: ibubseed = 0
+   ! RANDSEED: master seed for the Fortran intrinsic PRNG. Seeded once at
+   ! startup (see seed_random_number_generator), unconditionally on the side
+   ! that draws random numbers (mainnum / sequential), so every feature that
+   ! uses random_number (bubble perturbation, flux forcing perturbations,
+   ! etc.) inherits a deterministic stream. 0 (default) = leave the runtime
+   ! PRNG in its default state and reproduce historical behavior. Any
+   ! positive value seeds explicitly. (Previously named IBUBSEED.)
+   integer :: randseed = 0
   
 Contains
 

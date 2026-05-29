@@ -25,7 +25,7 @@ character(len=*) :: group,vr,cc
 real :: ff
 integer :: ii,nv
 integer :: inrflg
-integer, parameter ::nvgrid=37,nvstrt=77,nvindat=164,nvsound=10
+integer, parameter ::nvgrid=37,nvstrt=77,nvindat=165,nvsound=10
 integer ::  igrids(nvgrid),istart(nvstrt),iindat(nvindat),isound(nvsound)
 character(len=16) :: grids(nvgrid),start(nvstrt),indat(nvindat),sound(nvsound)
 data igrids/nvgrid*0/,istart/nvstrt*0/,iindat/nvindat*0/,isound/nvsound*0/
@@ -63,7 +63,7 @@ DATA INDAT/  &
      ,'ISNOWDAT','NVGCON','PCTLCON','NSLCON','ZROUGH','ALBEDO','SEATMP'  &
      ,'DTHCON','DRTCON','SLZ','SLMSTR','STGOFF','IDIFFK','IDIFFPERTS'    &
      ,'IHORGRAD','CSX','CSZ','XKHKM','ZKHKM','AKMIN','IBUBBLE','IBUBGRD' &
-     ,'IBUBSEED'                                                         &
+     ,'RANDSEED','IBUBSEED'                                              &
      ,'IBDXIA','IBDXIZ','IBDYJA','IBDYJZ','IBDZK1','IBDZK2','BTHP'       &
      ,'BRTP'                                                             &
      ,'NFLUX_FORCINGS','IFLUX_GRID','IFLUX_XIA','IFLUX_XIZ'             &
@@ -313,7 +313,7 @@ IF(GROUP.EQ.'$MODEL_OPTIONS') THEN
  IF(VR.EQ.'IFLUX_XIZ')      CALL varseti (VR,IFLUX_XIZ(NV),NV,max_flux_forcings,II,1,3000)
  IF(VR.EQ.'IFLUX_YJA')      CALL varseti (VR,IFLUX_YJA(NV),NV,max_flux_forcings,II,1,3000)
  IF(VR.EQ.'IFLUX_YJZ')      CALL varseti (VR,IFLUX_YJZ(NV),NV,max_flux_forcings,II,1,3000)
- IF(VR.EQ.'IFLUX_K_ATTEN')  CALL varseti (VR,IFLUX_K_ATTEN(NV),NV,max_flux_forcings,II,1,300)
+ IF(VR.EQ.'IFLUX_K_ATTEN')  CALL varseti (VR,IFLUX_K_ATTEN(NV),NV,max_flux_forcings,II,0,300)
  IF(VR.EQ.'FLUX_AMP_WM2')   CALL varsetf (VR,FLUX_AMP_WM2(NV),NV,max_flux_forcings,FF,-9999.,9999.)
  IF(VR.EQ.'IFLUX_TSTART')   CALL varseti (VR,IFLUX_TSTART(NV),NV,max_flux_forcings,II,0,999999)
  IF(VR.EQ.'IFLUX_TMAX')     CALL varseti (VR,IFLUX_TMAX(NV),NV,max_flux_forcings,II,0,999999)
@@ -339,7 +339,8 @@ IF(GROUP.EQ.'$MODEL_OPTIONS') THEN
  IF(VR.EQ.'RCE_SOLC')     CALL varsetf (VR,RCE_SOLC,NV,1,FF,0.,3000.)
  IF(VR.EQ.'RCE_UBMN')     CALL varsetf (VR,RCE_UBMN,NV,1,FF,0.,7.)
  IF(VR.EQ.'RCE_BUBL')     CALL varsetf (VR,RCE_BUBL,NV,1,FF,0.,5.)
- IF(VR.EQ.'IBUBSEED')     CALL varseti (VR,IBUBSEED,NV,1,II,0,2147483647)
+ IF(VR.EQ.'RANDSEED')     CALL varseti (VR,RANDSEED,NV,1,II,0,2147483647)
+ IF(VR.EQ.'IBUBSEED')     CALL varseti (VR,RANDSEED,NV,1,II,0,2147483647)  ! deprecated alias
  IF(VR.EQ.'ITRACER')      CALL varseti (VR,ITRACER,NV,1,II,0,100)
  IF(VR.EQ.'ITRACHIST')    CALL varseti (VR,ITRACHIST,NV,1,II,0,1)
  IF(VR.EQ.'LEVEL')        CALL varseti (VR,LEVEL,NV,1,II,0,4)
@@ -516,7 +517,7 @@ WRITE(6,'(100(3(A19,I5)/))')         &
  ,'IHORGRAD=',IHORGRAD               &
  ,'IBUBBLE=',IBUBBLE                 &
  ,'IBUBGRD=',IBUBGRD                 &
- ,'IBUBSEED=',IBUBSEED               &
+ ,'RANDSEED=',RANDSEED               &
  ,'IBDXIA=',IBDXIA                   &
  ,'IBDXIZ=',IBDXIZ                   &
  ,'IBDYJA=',IBDYJA                   &

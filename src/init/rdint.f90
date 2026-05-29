@@ -24,6 +24,12 @@ implicit none
 
 integer :: ifm,icm,ngr,nv,ierr,nsc
 
+! Seed the Fortran intrinsic PRNG once at startup using RANDSEED. This is
+! unconditional with respect to all other features so that every feature
+! that draws random numbers (bubble perturbation, flux forcing
+! perturbations, ...) reproduces across runs for a given RANDSEED.
+CALL seed_random_number_generator ()
+
 ! Initialize aerosol density and vanthoff factors if they are used
 ! Not used with HUCM-SBM microphysics
 if(level<=3)then

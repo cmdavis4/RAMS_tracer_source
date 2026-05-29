@@ -499,12 +499,48 @@ return
 END SUBROUTINE sfcinit_nofile_user
 
 !##############################################################################
+Subroutine seed_random_number_generator ()
+
+! Seed the Fortran intrinsic PRNG once at startup using RANDSEED from RAMSIN.
+! Called unconditionally from initlz so every feature that draws random
+! numbers (bubble perturbation, flux forcing perturbations, ...) inherits a
+! deterministic stream. Only the side that actually draws (mainnum or a
+! sequential run) needs to be seeded. RANDSEED == 0 (the default) leaves the
+! PRNG in its default state and preserves historical behavior.
+
+use mem_radiate, only: randseed
+use mem_grid, only: print_msg
+use node_mod, only: my_rams_num, mainnum, nmachs
+
+implicit none
+
+integer :: nseed, i
+integer, allocatable :: seed_arr(:)
+
+if (randseed <= 0) return
+if (my_rams_num /= mainnum .and. nmachs > 1) return
+
+call random_seed(size=nseed)
+allocate(seed_arr(nseed))
+do i = 1, nseed
+  seed_arr(i) = randseed + i - 1
+enddo
+call random_seed(put=seed_arr)
+deallocate(seed_arr)
+
+if (print_msg) print*,'RANDSEED=',randseed,' (PRNG seeded for all random perturbations)'
+
+return
+END SUBROUTINE seed_random_number_generator
+
+!##############################################################################
 Subroutine bubble (m1,m2,m3,i0,j0,thp,rtp)
 
 use micphys
 use mem_grid
-use mem_radiate, only: irce,rce_bubl,ibubseed
+use mem_radiate, only: irce,rce_bubl
 use node_mod, only: my_rams_num, mainnum, nmachs
+use mem_flexparams, only: flexparams
 
 implicit none
 
@@ -520,8 +556,6 @@ real bubctrx,bubctry,bubctrz
 real bubradx,bubrady,bubradz
 real, dimension(:,:), allocatable :: bub_rand_nums
 real random_perturbation_max_z
-integer :: nseed_bub, iseed_bub
-integer, allocatable :: seed_arr_bub(:)
 
 if(ibubble==1) then
  if(print_msg) then
@@ -628,7 +662,7 @@ endif
 if(ibubble==3 .or. ibubble==4) then
 
   ! Set perturbation depth
-  random_perturbation_max_z = 2000  ! m
+  random_perturbation_max_z = flexparams(5)  ! m
 
  if(print_msg) then
   print*,'Activating random temperature perturbation'
@@ -649,21 +683,9 @@ if(ibubble==3 .or. ibubble==4) then
  !
  ! In order to save memory space, do one level at a time.
 
- ! If the user specified IBUBSEED > 0 in RAMSIN, seed the Fortran intrinsic
- ! PRNG so different ensemble members can be obtained from the same RAMSIN
- ! by varying IBUBSEED. Only mainnum (or sequential) draws random numbers,
- ! so only mainnum needs to be seeded. With IBUBSEED == 0 we leave the PRNG
- ! in its default state and preserve historical behavior.
- if (ibubseed > 0 .and. ((my_rams_num .eq. mainnum) .or. (nmachs .eq. 1))) then
-   call random_seed(size=nseed_bub)
-   allocate(seed_arr_bub(nseed_bub))
-   do iseed_bub = 1, nseed_bub
-     seed_arr_bub(iseed_bub) = ibubseed + iseed_bub - 1
-   enddo
-   call random_seed(put=seed_arr_bub)
-   deallocate(seed_arr_bub)
-   if (print_msg) print*,'IBUBSEED=',ibubseed,' (PRNG seeded for bubble perturbation)'
- endif
+ ! PRNG seeding (RANDSEED) is handled once at startup in
+ ! seed_random_number_generator (called from initlz), so the bubble's draws
+ ! here just consume from the already-seeded stream.
 
  do k=2,m1
    ! select levels for temp. pert. based on altitude

@@ -45,5 +45,7 @@ include.mk*
 !include.mk.example
 include.mk
 
+checks
+
 CLAUDE.md
 .claude
